@@ -23,6 +23,10 @@ export interface Course {
     lessons: {
       title: string;
       duration: string; // e.g., "15 min"
+      resources?: {
+        name: string;
+        url: string;
+      }[];
     }[];
   }[];
 
@@ -64,7 +68,20 @@ export const courses: Course[] = [
       {
         title: "Module 1: Getting Started (HTML & CSS)",
         lessons: [
-          { title: "Introduction to Web Development", duration: "10 min" },
+          {
+            title: "Introduction to Web Development",
+            duration: "10 min",
+            resources: [
+              {
+                name: "HTML5 Semantic Tags Cheatsheet.pdf",
+                url: "/resources/html5-cheatsheet.pdf",
+              },
+              {
+                name: "Course Slide Deck (Module 1).ppt",
+                url: "/resources/module-1-slides.ppt",
+              },
+            ],
+          },
           { title: "HTML5 Structure and Semantics", duration: "45 min" },
           {
             title: "CSS Fundamentals: Selectors and Box Model",
@@ -304,9 +321,9 @@ export const courses: Course[] = [
     slug: "github-version-control",
     title: "GitHub Version Control",
     price: "$99",
-    image: "/images/courses/course4.jpg",
+    image: "/images/courses/course2.jpg",
     tutor: "Olivia John",
-    tutorImage: "/images/users/user4.jpg",
+    tutorImage: "/images/users/user2.jpg",
     lessons: 25, // Updated lesson count
     students: 80,
     description:

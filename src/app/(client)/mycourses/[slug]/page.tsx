@@ -189,7 +189,7 @@ const EnrolledCoursePage = async ({
                                 }`}
                               >
                                 <Link
-                                  href={`/courses/learn/${slug}/${moduleIndex}/${lessonIndex}`}
+                                  href={`/mycourses/${slug}/${moduleIndex}/${lessonIndex}`}
                                   className="flex items-center flex-1 hover:text-purple-600"
                                 >
                                   {isCompleted ? (
@@ -218,10 +218,18 @@ const EnrolledCoursePage = async ({
                                     <Clock size={14} className="mr-1" />
                                     {lesson.duration}
                                   </span>
-                                  <PlayCircle
-                                    size={20}
-                                    className="text-purple-600 cursor-pointer hover:text-purple-700"
-                                  />
+
+                                  {/* --- THIS IS THE FIX --- */}
+                                  <Link
+                                    href={`/mycourses/${slug}/${moduleIndex}/${lessonIndex}`}
+                                    aria-label={`Play lesson: ${lesson.title}`}
+                                  >
+                                    <PlayCircle
+                                      size={20}
+                                      className="text-purple-600 cursor-pointer hover:text-purple-700"
+                                    />
+                                  </Link>
+                                  {/* --- END OF FIX --- */}
                                 </div>
                               </li>
                             );

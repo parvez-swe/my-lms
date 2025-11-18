@@ -19,6 +19,7 @@ interface DiscussionSectionProps {
 
 function DiscussionComment({ comment }: { comment: Discussion }) {
   const [liked, setLiked] = useState(false);
+  const [isReplying, setIsReplying] = useState(false); // <-- 1. Add reply state
 
   return (
     <div className="border-b pb-4 last:border-b-0">
@@ -46,10 +47,51 @@ function DiscussionComment({ comment }: { comment: Discussion }) {
               <ThumbsUp size={14} className={liked ? "fill-purple-600" : ""} />
               <span>{comment.likes + (liked ? 1 : 0)}</span>
             </button>
-            <button className="text-xs text-gray-500 hover:text-purple-600">
+            <button
+              onClick={() => setIsReplying(!isReplying)} // <-- 2. Toggle reply state
+              className="text-xs text-gray-500 hover:text-purple-600"
+            >
               Reply
             </button>
           </div>
+
+          {/* --- 3. Add Conditional Reply Form --- */}
+          {isReplying && (
+            <div className="ml-10 mt-4 flex items-start space-x-3">
+              <Image
+                src="/images/profile.jpg" // Assuming current user's avatar
+                alt="Your avatar"
+                className="w-8 h-8 rounded-full"
+                width={32}
+                height={32}
+              />
+              <div className="flex-1">
+                <textarea
+                  className="w-full p-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  rows={2}
+                  placeholder={`Reply to ${comment.userName}...`}
+                />
+                <div className="flex justify-end items-center mt-2 space-x-3">
+                  <button
+                    onClick={() => setIsReplying(false)} // Cancel button
+                    className="text-xs text-gray-600 font-semibold hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Add reply logic here...
+                      setIsReplying(false); // Close form after posting
+                    }}
+                    className="bg-purple-600 text-white px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-purple-700"
+                  >
+                    Post Reply
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* --- End of Reply Form --- */}
         </div>
       </div>
     </div>
