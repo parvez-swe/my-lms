@@ -1,10 +1,49 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const ConfirmEmailContent: React.FC = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const token = searchParams.get("token");
+  const pending = searchParams.get("pending");
+
+  const [status, setStatus] = useState<"loading" | "success" | "error" | "pending">(
+    pending === "true" ? "pending" : token ? "loading" : "pending"
+  );
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (token) {
+      verifyEmail(token);
+    }
+  }, [token]);
+
+  const verifyEmail = async (verificationToken: string) => {
+    try {
+      const response = await fetch(`/api/auth/verify-email?token=${verificationToken}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setStatus("success");
+        setMessage("Your email has been verified successfully!");
+        // Redirect to sign in after 3 seconds
+        setTimeout(() => {
+          router.push("/authentication/sign-in");
+        }, 3000);
+      } else {
+        setStatus("error");
+        setMessage(result.error || "Verification failed");
+      }
+    } catch (error) {
+      setStatus("error");
+      setMessage("An error occurred during verification");
+    }
+  };
+
   return (
     <>
       <div className="auth-main-content bg-white dark:bg-[#0a0e19] py-[60px] md:py-[80px] lg:py-[135px]">
@@ -37,32 +76,97 @@ const ConfirmEmailContent: React.FC = () => {
 
               <div className="my-[17px] md:my-[25px]">
                 <h1 className="!font-semibold !text-[22px] md:!text-xl lg:!text-2xl !mb-[5px] md:!mb-[10px]">
-                  Welcome back to Trezo!
+                  {status === "pending"
+                    ? "Check Your Email"
+                    : status === "success"
+                    ? "Email Verified!"
+                    : "Verification Failed"}
                 </h1>
                 <p className="font-medium leading-[1.5] lg:text-md text-[#445164] dark:text-gray-400">
-                  Your mail is verified! Your account is now safe from unwanted
-                  activities.
+                  {status === "pending"
+                    ? "We've sent a verification link to your email. Please check your inbox and click the link to verify your account."
+                    : status === "success"
+                    ? message || "Your email has been verified successfully! You can now sign in to your account."
+                    : message || "There was an error verifying your email. The link may have expired or is invalid."}
                 </p>
               </div>
 
-              <div className="flex items-center justify-center bg-[#f5f7f8] text-success-600 rounded-full w-[120px] h-[120px] dark:bg-[#15203c]">
-                <i className="material-symbols-outlined !text-[55px]">done</i>
-              </div>
+              {status === "loading" && (
+                <div className="flex items-center justify-center bg-[#f5f7f8] text-primary-500 rounded-full w-[120px] h-[120px] dark:bg-[#15203c] mb-[20px]">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+                </div>
+              )}
 
-              <span className="block font-medium text-black dark:text-white md:text-md mt-[20px]">
-                Your Email Verified{" "}
-                <span className="text-success-600">Successfully!</span>
-              </span>
+              {status === "success" && (
+                <div className="flex items-center justify-center bg-[#f5f7f8] text-success-600 rounded-full w-[120px] h-[120px] dark:bg-[#15203c] mb-[20px]">
+                  <i className="material-symbols-outlined !text-[55px]">done</i>
+                </div>
+              )}
 
-              <Link
-                href="/dashboard/ecommerce/"
-                className="md:text-md block w-full text-center transition-all rounded-md font-medium mt-[20px] md:mt-[25px] lg:mt-[30px] py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400"
-              >
-                <span className="flex items-center justify-center gap-[5px]">
-                  <i className="material-symbols-outlined">login</i>
-                  Back To Home
+              {status === "error" && (
+                <div className="flex items-center justify-center bg-[#f5f7f8] text-red-600 rounded-full w-[120px] h-[120px] dark:bg-[#15203c] mb-[20px]">
+                  <i className="material-symbols-outlined !text-[55px]">error</i>
+                </div>
+              )}
+
+              {status === "pending" && (
+                <div className="flex items-center justify-center bg-[#f5f7f8] text-primary-500 rounded-full w-[120px] h-[120px] dark:bg-[#15203c] mb-[20px]">
+                  <i className="material-symbols-outlined !text-[55px]">mail</i>
+                </div>
+              )}
+
+              {status === "success" && (
+                <span className="block font-medium text-black dark:text-white md:text-md mt-[20px]">
+                  Your Email Verified{" "}
+                  <span className="text-success-600">Successfully!</span>
                 </span>
-              </Link>
+              )}
+
+              <div className="mt-[20px] md:mt-[25px] lg:mt-[30px]">
+                {status === "success" && (
+                  <Link
+                    href="/authentication/sign-in"
+                    className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400"
+                  >
+                    <span className="flex items-center justify-center gap-[5px]">
+                      <i className="material-symbols-outlined">login</i>
+                      Sign In
+                    </span>
+                  </Link>
+                )}
+
+                {status === "error" && (
+                  <>
+                    <Link
+                      href="/authentication/sign-up"
+                      className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400 mb-[15px]"
+                    >
+                      <span className="flex items-center justify-center gap-[5px]">
+                        <i className="material-symbols-outlined">person_add</i>
+                        Sign Up Again
+                      </span>
+                    </Link>
+                    <Link
+                      href="/authentication/sign-in"
+                      className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-primary-500 border border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                    >
+                      Back to Sign In
+                    </Link>
+                  </>
+                )}
+
+                {status === "pending" && (
+                  <Link
+                    href="/authentication/sign-in"
+                    className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400"
+                  >
+                    <span className="flex items-center justify-center gap-[5px]">
+                      <i className="material-symbols-outlined">login</i>
+                      Back To Sign In
+                    </span>
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>

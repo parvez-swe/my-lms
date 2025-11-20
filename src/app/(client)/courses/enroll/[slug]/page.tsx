@@ -1,13 +1,7 @@
 import React from "react";
-import { courses } from "@/data/courses";
-import EnrollmentForm from "./EnrollmentClientPage";
-
-// Generate static params for all courses
-export async function generateStaticParams() {
-  return courses.map((course) => ({
-    slug: course.slug,
-  }));
-}
+import { notFound } from "next/navigation";
+import MultiStepEnrollmentForm from "@/components/Enrollment/MultiStepEnrollmentForm";
+import { Course } from "@/data/courses";
 
 // Server component that fetches course data and passes it to the client component
 export default async function Page({
@@ -16,15 +10,25 @@ export default async function Page({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const course = courses.find((c) => c.slug === slug);
 
-  if (!course) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-xl text-gray-600">Course not found.</p>
-      </div>
-    );
+  // Fetch course from API
+  let course: Course | null = null;
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const response = await fetch(`${baseUrl}/api/courses/${slug}`, {
+      cache: "no-store",
+    });
+    const result = await response.json();
+    if (result.success) {
+      course = result.data;
+    }
+  } catch (error) {
+    console.error("Failed to fetch course:", error);
   }
 
-  return <EnrollmentForm course={course} />;
+  if (!course) {
+    notFound();
+  }
+
+  return <MultiStepEnrollmentForm course={course} />;
 }

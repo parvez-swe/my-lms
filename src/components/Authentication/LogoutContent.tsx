@@ -1,10 +1,32 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 
 const LogoutContent: React.FC = () => {
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    // Sign out when component mounts
+    const handleLogout = async () => {
+      await signOut({ redirect: false });
+      // Redirect to home after a brief delay
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 2000);
+    };
+
+    handleLogout();
+  }, [router]);
+
+  const userName = session?.user?.name || "User";
+  const userImage = session?.user?.image || "/images/admin.png";
+
   return (
     <>
       <div className="auth-main-content bg-white dark:bg-[#0a0e19] py-[60px] md:py-[80px] lg:py-[135px]">
@@ -38,23 +60,23 @@ const LogoutContent: React.FC = () => {
 
               <div className="my-[17px] md:my-[25px]">
                 <h1 className="!font-semibold !text-[22px] md:!text-xl lg:!text-2xl !mb-[5px] md:!mb-[10px]">
-                  Welcome back to Trezo!
+                  You Are Logged Out
                 </h1>
                 <p className="font-medium leading-[1.5] lg:text-md text-[#445164] dark:text-gray-400">
-                  You Are Logged out
+                  Thank you for using our platform. You have been successfully logged out.
                 </p>
               </div>
 
               <div className="flex items-center mb-[20px]">
                 <Image
-                  src="/images/admin.png"
-                  alt="admin-image"
+                  src={userImage}
+                  alt="user-image"
                   className="rounded-full w-[50px] border-[2px] ltr:mr-[13px] rtl:ml-[13px] border-primary-200"
                   width={50}
                   height={50}
                 />
                 <span className="font-semibold text-black dark:text-white block">
-                  Olivia John
+                  {userName}
                 </span>
               </div>
 
@@ -64,7 +86,7 @@ const LogoutContent: React.FC = () => {
               >
                 <span className="flex items-center justify-center gap-[5px]">
                   <i className="material-symbols-outlined">autorenew</i>
-                  Sign In
+                  Sign In Again
                 </span>
               </Link>
             </div>

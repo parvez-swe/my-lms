@@ -10,6 +10,7 @@ import "../globals.css";
 import LayoutProvider from "@/providers/LayoutProvider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Providers } from "../providers";
 
 const inter = Inter({
   variable: "--font-body",
@@ -29,7 +30,9 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body className={`${inter.variable} antialiased`}>
-        <LayoutProvider>{children}</LayoutProvider>
+        <Providers>
+          <LayoutProvider>{children}</LayoutProvider>{" "}
+        </Providers>
       </body>
     </html>
   );

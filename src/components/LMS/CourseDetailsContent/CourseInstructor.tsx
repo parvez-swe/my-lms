@@ -1,9 +1,14 @@
 "use client";
 
 import React from "react";
-import Image from "next/image"; 
+import Image from "next/image";
+import { Course } from "@/data/courses";
 
-const CourseInstructor: React.FC = () => {
+interface CourseInstructorProps {
+  course: Course;
+}
+
+const CourseInstructor: React.FC<CourseInstructorProps> = ({ course }) => {
   return (
     <>
       <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
@@ -15,7 +20,7 @@ const CourseInstructor: React.FC = () => {
         <div className="trezo-card-content">
           <div className="flex items-center">
             <Image
-              src="/images/users/user7.jpg"
+              src={course.tutorImage}
               alt="user-image"
               className="rounded-full w-[100px]"
               width={100}
@@ -23,37 +28,22 @@ const CourseInstructor: React.FC = () => {
             />
             <div className="ltr:ml-[15px] rtl:mr-[15px]">
               <span className="block text-black dark:text-white text-[17px] mb-[2px] font-medium">
-                Aliva Cohen
+                {course.tutor}
               </span>
-              <span className="block">aliva@trezo.com</span>
             </div>
           </div>
+          {course.tutorBio && (
+            <>
+              <span className="text-black dark:text-white font-medium block mb-[7px] mt-[22px]">
+                Bio
+              </span>
+              <p>{course.tutorBio}</p>
+            </>
+          )}
           <span className="text-black dark:text-white font-medium block mb-[7px] mt-[22px]">
             Course Description
           </span>
-          <p>
-            This course is designed for beginners who want to learn the
-            fundamentals of the Python programming language. The course covers
-            basic syntax, data types, control structures, and an introduction to
-            object-oriented programming. Participants will have hands-on coding
-            exercises to reinforce their learning.
-          </p>
-          <span className="text-black dark:text-white font-medium block mb-[7px] mt-[22px]">
-            Course Schedule
-          </span>
-          <p>
-            Start Date: 01 August 2024
-            <br />
-            End Date: 30 December 2024
-          </p>
-          <span className="text-black dark:text-white font-medium block mb-[7px] mt-[22px]">
-            Status
-          </span>
-          <p>
-            The course is currently in progress. Students are actively engaged
-            in the learning materials, and the instructor is providing guidance
-            and support.
-          </p>
+          <p>{course.description}</p>
         </div>
       </div>
     </>

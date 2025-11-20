@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { Course } from "@/data/courses";
 
 interface Review {
   id: string;
@@ -13,6 +14,10 @@ interface Review {
   date: string;
   time: string;
   status: "Pending" | "Published";
+}
+
+interface ManageReviewsProps {
+  course: Course;
 }
 
 const initialReviews: Review[] = [
@@ -137,7 +142,7 @@ const initialReviews: Review[] = [
   },
 ];
 
-const ManageReviews: React.FC = () => {
+const ManageReviews: React.FC<ManageReviewsProps> = ({ course }) => {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const reviewsPerPage = 5;

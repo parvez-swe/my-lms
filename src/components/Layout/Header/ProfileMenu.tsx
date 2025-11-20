@@ -3,18 +3,32 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 const ProfileMenu: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
 
   const [active, setActive] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null); // Ref for the dropdown container
- 
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push("/");
+    router.refresh();
+  };
+
+  // Get user data from session
+  const userName = session?.user?.name || "User";
+  const userImage = session?.user?.image || "/images/admin.png";
+  const userRole = session?.user?.role || "student";
+
   const handleDropdownToggle = () => {
     setActive((prevState) => !prevState);
   };
-    
+
   // Handle clicks outside the dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,14 +62,14 @@ const ProfileMenu: React.FC = () => {
         }`}
       >
         <Image
-          src="/images/admin.png"
+          src={userImage}
           className="w-[35px] h-[35px] md:w-[42px] md:h-[42px] rounded-full ltr:md:mr-[2px] ltr:lg:mr-[8px] rtl:md:ml-[2px] rtl:lg:ml-[8px] border-[2px] border-primary-200 inline-block"
-          alt="admin-image"
+          alt="user-image"
           width={35}
           height={35}
         />
         <span className="block font-semibold text-[0px] lg:text-base">
-          Olivia
+          {userName.split(" ")[0]}
         </span>
         <i className="ri-arrow-down-s-line text-[15px] absolute ltr:-right-[3px] rtl:-left-[3px] top-1/2 -translate-y-1/2 mt-px"></i>
       </button>
@@ -64,26 +78,26 @@ const ProfileMenu: React.FC = () => {
         <div className="profile-menu-dropdown bg-white dark:bg-[#0c1427] transition-all shadow-3xl dark:shadow-none py-[22px] absolute mt-[13px] md:mt-[14px] w-[195px] z-[1] top-full ltr:right-0 rtl:left-0 rounded-md">
           <div className="flex items-center border-b border-gray-100 dark:border-[#172036] pb-[12px] mx-[20px] mb-[10px]">
             <Image
-              src="/images/admin.png"
+              src={userImage}
               className="rounded-full w-[31px] h-[31px] ltr:mr-[9px] rtl:ml-[9px] border-2 border-primary-200 inline-block"
-              alt="admin-image"
+              alt="user-image"
               width={31}
               height={31}
             />
             <div>
               <span className="block text-black dark:text-white font-medium">
-                Olivia John
+                {userName}
               </span>
-              <span className="block text-xs">Marketing Manager</span>
+              <span className="block text-xs capitalize">{userRole}</span>
             </div>
           </div>
 
           <ul>
             <li>
               <Link
-                href="/my-profile/"
+                href="/profile"
                 className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/my-profile/" ? "text-primary-500" : ""
+                  pathname === "/profile" ? "text-primary-500" : ""
                 }`}
               >
                 <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
@@ -92,6 +106,36 @@ const ProfileMenu: React.FC = () => {
                 My Profile
               </Link>
             </li>
+            {(userRole === "admin" || userRole === "superadmin") && (
+              <li>
+                <Link
+                  href="/dashboard/ecommerce/"
+                  className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
+                    pathname?.startsWith("/dashboard") ? "text-primary-500" : ""
+                  }`}
+                >
+                  <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
+                    dashboard
+                  </i>
+                  Dashboard
+                </Link>
+              </li>
+            )}
+            {userRole === "student" && (
+              <li>
+                <Link
+                  href="/mycourses"
+                  className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
+                    pathname?.startsWith("/mycourses") ? "text-primary-500" : ""
+                  }`}
+                >
+                  <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
+                    book
+                  </i>
+                  My Courses
+                </Link>
+              </li>
+            )}
             <li>
               <Link
                 href="/apps/chat/"
@@ -166,7 +210,9 @@ const ProfileMenu: React.FC = () => {
               <Link
                 href="/authentication/lock-screen/"
                 className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/authentication/lock-screen/" ? "text-primary-500" : ""
+                  pathname === "/authentication/lock-screen/"
+                    ? "text-primary-500"
+                    : ""
                 }`}
               >
                 <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
@@ -176,17 +222,15 @@ const ProfileMenu: React.FC = () => {
               </Link>
             </li>
             <li>
-              <Link
-                href="/authentication/logout/"
-                className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/authentication/logout/" ? "text-primary-500" : ""
-                }`}
+              <button
+                onClick={handleLogout}
+                className="w-full text-left block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500"
               >
                 <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
                   logout
                 </i>
                 Logout
-              </Link>
+              </button>
             </li>
           </ul>
         </div>

@@ -2,12 +2,17 @@
 
 import React from "react";
 import Image from "next/image";
+import { Course } from "@/data/courses";
 
 interface Student {
   id: string;
   name: string;
   email: string;
   avatar: string;
+}
+
+interface EnrolledStudentsProps {
+  course: Course;
 }
 
 const initialStudents: Student[] = [
@@ -73,8 +78,7 @@ const initialStudents: Student[] = [
   },
 ];
 
-
-const EnrolledStudents: React.FC = () => {
+const EnrolledStudents: React.FC<EnrolledStudentsProps> = ({ course }) => {
   return (
     <>
       <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">

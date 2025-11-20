@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  // For Static Export
-  output: 'export',
+  // Note: output: 'export' is commented out because API routes require a server
+  // If you need static export, you'll need to remove API routes or use a separate backend
+  // output: 'export',
   trailingSlash: true,
   images: {
     unoptimized: true,

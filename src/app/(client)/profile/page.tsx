@@ -1,23 +1,13 @@
 "use client";
 import Link from "next/link";
-import React, { useState } from "react";
-
-// --- Mock Data ---
-// In a real LMS, this would come from props or a data fetching hook
-const userProfile = {
-  name: "Alex Johnson",
-  email: "alex.johnson@lms.edu",
-  // Using a placeholder image
-  avatar: "https://placehold.co/120x120/8B5CF6/FFFFFF?text=AJ",
-  bio: "Eager learner focusing on data science and machine learning. Currently enrolled in COMP-101 and STAT-203.",
-  memberSince: "August 2024",
-};
+import React, { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type Tab = "profile" | "account" | "notifications" | "billing";
 
 // --- SVG Icons ---
-// Replaced lucide-react icons with inline SVGs
-
 const UserIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -109,8 +99,6 @@ const LogOutIcon = () => (
 );
 
 // --- Reusable Components ---
-
-// Sidebar Button Component
 const SidebarButton = ({
   icon,
   label,
@@ -137,152 +125,311 @@ const SidebarButton = ({
 );
 
 // --- Tab Content Components ---
+interface EditProfileTabProps {
+  userProfile: {
+    name: string;
+    email: string;
+    image?: string;
+  };
+  onUpdate: () => void;
+}
 
-// Edit Profile Tab Content
-const EditProfileTab = () => (
-  <div>
-    <h2 className="text-2xl font-bold mb-6 text-gray-800">Edit Profile</h2>
-    <form
-      className="space-y-6"
-      onSubmit={(e) => {
-        e.preventDefault();
-        // Handle form submission
-        console.log("Profile changes saved!");
-      }}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label
-            htmlFor="fullName"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Full Name
-          </label>
-          <input
-            type="text"
-            id="fullName"
-            defaultValue={userProfile.name}
-            className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Email Address
-          </label>
-          <input
-            type="email"
-            id="email"
-            defaultValue={userProfile.email}
-            disabled
-            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
-          />
-        </div>
-      </div>
-      <div>
-        <label
-          htmlFor="bio"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Bio
-        </label>
-        <textarea
-          id="bio"
-          rows={4}
-          defaultValue={userProfile.bio}
-          className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
-          placeholder="Tell us a little about yourself..."
-        ></textarea>
-      </div>
-      <div className="text-right">
-        <button
-          type="submit"
-          className="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-        >
-          Save Changes
-        </button>
-      </div>
-    </form>
-  </div>
-);
+const EditProfileTab: React.FC<EditProfileTabProps> = ({
+  userProfile,
+  onUpdate,
+}) => {
+  const [name, setName] = useState(userProfile.name);
+  const [image, setImage] = useState(userProfile.image || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-// Account Settings Tab Content
-const AccountSettingsTab = () => (
-  <div>
-    <h2 className="text-2xl font-bold mb-6 text-gray-800">Account Settings</h2>
-    <div className="space-y-8">
-      {/* Change Password Section */}
-      <form
-        className="space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          console.log("Password change requested!");
-        }}
-      >
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">
-          Change Password
-        </h3>
+  useEffect(() => {
+    setName(userProfile.name);
+    setImage(userProfile.image || "");
+  }, [userProfile]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/users/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, image: image || undefined }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess(result.message || "Profile updated successfully!");
+        onUpdate();
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(result.error || "Failed to update profile");
+      }
+    } catch (err) {
+      console.error("Profile update error:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Edit Profile</h2>
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-green-600">{success}</p>
+        </div>
+      )}
+      <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label
-              htmlFor="newPassword"
+              htmlFor="fullName"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              New Password
+              Full Name
             </label>
             <input
-              type="password"
-              id="newPassword"
+              type="text"
+              id="fullName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
+              required
             />
           </div>
           <div>
             <label
-              htmlFor="confirmPassword"
+              htmlFor="email"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Confirm New Password
+              Email Address
             </label>
             <input
-              type="password"
-              id="confirmPassword"
-              className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
+              type="email"
+              id="email"
+              value={userProfile.email}
+              disabled
+              className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
             />
           </div>
+        </div>
+        <div>
+          <label
+            htmlFor="image"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Profile Image URL
+          </label>
+          <input
+            type="url"
+            id="image"
+            value={image}
+            onChange={(e) => setImage(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
+            placeholder="https://example.com/image.jpg"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Enter a URL for your profile image
+          </p>
         </div>
         <div className="text-right">
           <button
             type="submit"
-            className="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            disabled={loading}
+            className="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Update Password
+            {loading ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>
+    </div>
+  );
+};
 
-      {/* Delete Account Section */}
-      <div className="border-t pt-6 border-red-200">
-        <h3 className="text-lg font-semibold text-red-600 mb-2">
-          Delete Account
-        </h3>
-        <p className="text-gray-600 mb-4">
-          Once you delete your account, there is no going back. Please be
-          certain. This action is permanent and will remove all your course
-          data.
-        </p>
-        <button
-          type="button"
-          onClick={() => console.warn("Account deletion requested!")}
-          className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-        >
-          Delete My Account
-        </button>
+interface AccountSettingsTabProps {
+  onUpdate?: () => void;
+}
+
+const AccountSettingsTab: React.FC<AccountSettingsTabProps> = () => {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/users/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess(result.message || "Password changed successfully!");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(result.error || "Failed to change password");
+      }
+    } catch (err) {
+      console.error("Password change error:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className=" ">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+        Account Settings
+      </h2>
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-green-600">{success}</p>
+        </div>
+      )}
+      <div className="space-y-8">
+        {/* Change Password Section */}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Change Password
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                htmlFor="currentPassword"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Current Password
+              </label>
+              <input
+                type="password"
+                id="currentPassword"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
+                required
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="newPassword"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                New Password
+              </label>
+              <input
+                type="password"
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
+                required
+                minLength={6}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500"
+                required
+                minLength={6}
+              />
+            </div>
+          </div>
+          <div className="text-right">
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Updating..." : "Update Password"}
+            </button>
+          </div>
+        </form>
+
+        {/* Delete Account Section */}
+        <div className="border-t pt-6 border-red-200">
+          <h3 className="text-lg font-semibold text-red-600 mb-2">
+            Delete Account
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Once you delete your account, there is no going back. Please be
+            certain. This action is permanent and will remove all your course
+            data.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                confirm(
+                  "Are you sure you want to delete your account? This action cannot be undone."
+                )
+              ) {
+                alert("Account deletion is not yet implemented.");
+              }
+            }}
+            className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            Delete My Account
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Placeholder for other tabs
 const ComingSoonTab = ({ title }: { title: string }) => (
@@ -295,14 +442,73 @@ const ComingSoonTab = ({ title }: { title: string }) => (
 );
 
 // --- Main App Component ---
-// Renamed from ProfilePage to App and made default export
-export default function App() {
+export default function ProfilePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
+  const [userProfile, setUserProfile] = useState<{
+    name: string;
+    email: string;
+    image?: string;
+    role?: string;
+    createdAt?: Date;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/authentication/sign-in?callbackUrl=/profile");
+      return;
+    }
+
+    if (status === "authenticated") {
+      fetchProfile();
+    }
+  }, [status, router]);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/users/profile");
+      const result = await response.json();
+
+      if (result.success) {
+        setUserProfile(result.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push("/");
+    router.refresh();
+  };
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated" || !userProfile) {
+    return null; // Will redirect
+  }
 
   const renderContent = () => {
     switch (activeTab) {
       case "profile":
-        return <EditProfileTab />;
+        return (
+          <EditProfileTab userProfile={userProfile} onUpdate={fetchProfile} />
+        );
       case "account":
         return <AccountSettingsTab />;
       case "notifications":
@@ -310,46 +516,46 @@ export default function App() {
       case "billing":
         return <ComingSoonTab title="Billing & Subscriptions" />;
       default:
-        return <EditProfileTab />;
+        return (
+          <EditProfileTab userProfile={userProfile} onUpdate={fetchProfile} />
+        );
     }
   };
 
+  const userImage =
+    userProfile.image || session?.user?.image || "/images/admin.png";
+  const memberSince = userProfile.createdAt
+    ? new Date(userProfile.createdAt).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "Recently";
+
   return (
-    <div className="bg-gray-50 min-h-screen font-sans">
+    <div className="bg-gray-50 min-h-screen font-sans pt-20">
       {/* Profile Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
-            {/* Replaced next/image with standard img */}
-            <img
-              src={userProfile.avatar}
+            <Image
+              src={userImage}
               alt={`${userProfile.name}'s profile picture`}
               width={120}
               height={120}
               className="rounded-full border-4 border-white shadow-lg"
-              onError={(e) => {
-                // Fallback in case the image fails to load
-                (e.currentTarget as HTMLImageElement).src =
-                  "https://placehold.co/120x120/8B5CF6/FFFFFF?text=AJ";
-              }}
             />
             <div className="text-center md:text-left flex-grow">
               <h1 className="text-3xl font-bold text-gray-900">
                 {userProfile.name}
               </h1>
               <p className="text-gray-600">{userProfile.email}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Member since {userProfile.memberSince}
+              <p className="text-sm text-gray-500 mt-1 capitalize">
+                {userProfile.role || "Student"} • Member since {memberSince}
               </p>
             </div>
             <div className="md:ml-auto">
-              {/* Replaced next/link with standard <a> */}
               <Link
-                href="/mycourses" // Changed to a hash link as an example
-                // onClick={(e) => {
-                //   e.preventDefault();
-                //   console.log("Navigate to My Courses");
-                // }}
+                href="/mycourses"
                 className="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
               >
                 My Courses
@@ -394,7 +600,7 @@ export default function App() {
                 <SidebarButton
                   icon={<LogOutIcon />}
                   label="Logout"
-                  onClick={() => console.log("Logout functionality clicked.")}
+                  onClick={handleLogout}
                 />
               </nav>
             </div>

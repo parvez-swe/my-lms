@@ -1,8 +1,13 @@
 "use client";
 
-import React from "react"; 
+import React from "react";
+import { Course } from "@/data/courses";
 
-const OverallReviews: React.FC = () => {
+interface OverallReviewsProps {
+  course: Course;
+}
+
+const OverallReviews: React.FC<OverallReviewsProps> = ({ course }) => {
   return (
     <>
       <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">

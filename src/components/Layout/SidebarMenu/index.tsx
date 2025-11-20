@@ -47,68 +47,23 @@ const menuSections: MenuSection[] = [
         children: [
           { title: "eCommerce", path: "/dashboard/ecommerce/" },
           {
-            title: "Project Management",
-            path: "/dashboard/project-management/",
-          },
-          { title: "LMS", path: "/dashboard/lms/" },
-          {
             title: "HelpDesk",
             path: "/dashboard/helpdesk/",
             badge: { text: "Hot", color: "hot" },
           },
           { title: "Analytics", path: "/dashboard/analytics/" },
-          { title: "Crypto", path: "/dashboard/crypto/" },
-          { title: "Sales", path: "/dashboard/sales/" },
-          { title: "Hospital", path: "/dashboard/hospital/" },
-          { title: "HRM", path: "/dashboard/hrm/" },
           { title: "School", path: "/dashboard/school/" },
-          {
-            title: "Call Center",
-            path: "/dashboard/call-center/",
-            badge: { text: "Popular", color: "popular" },
-          },
-          { title: "Marketing", path: "/dashboard/marketing/" },
-          { title: "NFT", path: "/dashboard/nft/" },
-          { title: "SaaS", path: "/dashboard/saas/" },
-          {
-            title: "Real Estate",
-            path: "/dashboard/real-estate/",
-            badge: { text: "Top", color: "top" },
-          },
-          { title: "Shipment", path: "/dashboard/shipment/" },
           { title: "Finance", path: "/dashboard/finance/" },
-          { title: "POS System", path: "/dashboard/pos-system/" },
-          { title: "Podcast", path: "/dashboard/podcast/" },
-          { title: "Social Media", path: "/dashboard/social-media/" },
-          { title: "Doctor", path: "/dashboard/doctor/" },
-          { title: "Beauty Salon", path: "/dashboard/beauty-salon/" },
-          { title: "Store Analysis", path: "/dashboard/store-analysis/" },
-          { title: "Restaurant", path: "/dashboard/restaurant/" },
-          {
-            title: "Hotel",
-            path: "/dashboard/hotel/",
-            badge: { text: "New", color: "new" },
-          },
-          {
-            title: "Real Estate Agent",
-            path: "/dashboard/real-estate-agent/",
-            badge: { text: "New", color: "new" },
-          },
-          {
-            title: "Credit Card",
-            path: "/dashboard/credit-card/",
-            badge: { text: "New", color: "new" },
-          },
-          {
-            title: "Crypto Trader",
-            path: "/dashboard/crypto-trader/",
-            badge: { text: "New", color: "new" },
-          },
-          {
-            title: "Crypto Perf.",
-            path: "/dashboard/crypto-performance/",
-            badge: { text: "New", color: "new" },
-          },
+        ],
+      },
+      {
+        type: "accordion",
+        title: "Courses",
+        icon: "book",
+        children: [
+          { title: "Course List", path: "/dashboard/courses" },
+          { title: "Create Course", path: "/dashboard/courses/create" },
+          { title: "Enrolments", path: "/dashboard/enrolments" },
         ],
       },
       {
@@ -128,6 +83,12 @@ const menuSections: MenuSection[] = [
   {
     title: "Apps",
     items: [
+      {
+        type: "link",
+        title: "Users",
+        icon: "format_list_bulleted",
+        path: "/dashboard/users/",
+      },
       {
         type: "link",
         title: "To Do List",

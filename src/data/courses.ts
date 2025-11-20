@@ -4,6 +4,7 @@ export interface Course {
   slug: string;
   title: string;
   price: string;
+  pricingType?: "free" | "paid";
   image: string;
   tutor: string;
   tutorImage: string;
@@ -12,8 +13,8 @@ export interface Course {
   description: string; // This will be used for the "About" section
 
   // --- New Fields ---
-  tutorBio: string;
-  tutorSocials: {
+  tutorBio?: string;
+  tutorSocials?: {
     platform: "linkedin" | "twitter" | "github";
     url: string;
   }[];
@@ -23,26 +24,36 @@ export interface Course {
     lessons: {
       title: string;
       duration: string; // e.g., "15 min"
+      videoType?: "youtube" | "cloudinary" | "url"; // Video source type
+      videoUrl?: string; // YouTube URL or Cloudinary URL or direct video URL
+      cloudinaryPublicId?: string; // Cloudinary public ID if using Cloudinary
+      isPublic?: boolean; // Whether lesson is public or private (default: false)
       resources?: {
         name: string;
         url: string;
       }[];
     }[];
   }[];
+  faqs?: {
+    question: string;
+    answer: string;
+  }[];
 
-  testimonials: {
+  testimonials?: {
     studentName: string;
     studentImage: string;
     rating: number; // 1-5
     comment: string;
   }[];
 
-  successStories: {
+  successStories?: {
     studentName: string;
     studentImage: string;
     story: string;
     projectUrl?: string;
   }[];
+  ratingAverage?: number;
+  ratingCount?: number;
 }
 
 export const courses: Course[] = [
@@ -50,6 +61,7 @@ export const courses: Course[] = [
     slug: "frontend-development",
     title: "Frontend Development Mastery",
     price: "$199",
+    pricingType: "paid",
     image: "/images/courses/course1.jpg",
     tutor: "John Doe",
     tutorImage: "/images/users/user1.jpg",
@@ -118,6 +130,18 @@ export const courses: Course[] = [
         ],
       },
     ],
+    faqs: [
+      {
+        question: "Do I need prior coding experience?",
+        answer:
+          "No. We start from the absolute basics and gradually build up to advanced topics with plenty of practice.",
+      },
+      {
+        question: "Will I get lifetime access?",
+        answer:
+          "Yes, once you enroll you can revisit all lessons, resources, and updates whenever you like.",
+      },
+    ],
     testimonials: [
       {
         studentName: "Alice Martin",
@@ -134,6 +158,8 @@ export const courses: Course[] = [
           "I landed my first developer job after taking this course. The modules are well-structured and easy to follow.",
       },
     ],
+    ratingAverage: 4.8,
+    ratingCount: 128,
     successStories: [
       {
         studentName: "Sarah Chen",
@@ -149,6 +175,7 @@ export const courses: Course[] = [
     slug: "backend-development",
     title: "Backend Development",
     price: "$249",
+    pricingType: "paid",
     image: "/images/courses/course2.jpg",
     tutor: "Jane Smith",
     tutorImage: "/images/users/user2.jpg",
@@ -218,6 +245,8 @@ export const courses: Course[] = [
           "Great course! Very practical and hands-on. I wish there was one more module on deployment, but overall fantastic value.",
       },
     ],
+    ratingAverage: 4.6,
+    ratingCount: 94,
     successStories: [
       {
         studentName: "David Kim",

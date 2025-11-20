@@ -4,11 +4,13 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import ProfileMenu from "@/components/Layout/Header/ProfileMenu";
 
 const NAV_ITEMS = [
   { name: "Home", path: "/" },
-  { name: "Features", path: "/front-pages/features/" },
-  { name: "Our Team", path: "/front-pages/team/" },
+  { name: "Courses", path: "/courses/" },
+  // { name: "Our Team", path: "/front-pages/team/" },
   { name: "FAQ's", path: "/front-pages/faq/" },
   { name: "Contact", path: "/front-pages/contact/" },
   { name: "Admin", path: "/dashboard/ecommerce/", isAdmin: true },
@@ -16,6 +18,7 @@ const NAV_ITEMS = [
 
 const Navbar: React.FC = () => {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [isMenuOpen, setMenuOpen] = useState(false);
   const handleToggle = () => setMenuOpen(!isMenuOpen);
 
@@ -96,29 +99,37 @@ const Navbar: React.FC = () => {
               </ul>
 
               <div className="flex items-center ltr:ml-auto rtl:mr-auto gap-[15px]">
-                <Link
-                  href="/authentication/sign-in"
-                  className="inline-block text-purple-600 lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] rounded-md transition-all font-medium border border-purple-600 hover:text-white hover:bg-purple-500 hover:border-purple-500"
-                >
-                  <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
-                    <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
-                      login
-                    </i>
-                    Login
-                  </span>
-                </Link>
+                {status === "loading" ? (
+                  <div className="w-[35px] h-[35px] rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                ) : session?.user ? (
+                  <ProfileMenu />
+                ) : (
+                  <>
+                    <Link
+                      href="/authentication/sign-in"
+                      className="inline-block text-purple-600 lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] rounded-md transition-all font-medium border border-purple-600 hover:text-white hover:bg-purple-500 hover:border-purple-500"
+                    >
+                      <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
+                        <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
+                          login
+                        </i>
+                        Login
+                      </span>
+                    </Link>
 
-                <Link
-                  href="/authentication/sign-up"
-                  className="inline-block lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] bg-purple-600 text-white rounded-md transition-all font-medium border border-purple-600 hover:bg-purple-500 hover:border-purple-500"
-                >
-                  <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
-                    <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
-                      person
-                    </i>
-                    Register
-                  </span>
-                </Link>
+                    <Link
+                      href="/authentication/sign-up"
+                      className="inline-block lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] bg-purple-600 text-white rounded-md transition-all font-medium border border-purple-600 hover:bg-purple-500 hover:border-purple-500"
+                    >
+                      <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
+                        <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
+                          person
+                        </i>
+                        Register
+                      </span>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
@@ -148,29 +159,37 @@ const Navbar: React.FC = () => {
               </ul>
 
               <div className="flex items-center gap-[15px] mt-[14px] md:mt-[16px]">
-                <Link
-                  href="/authentication/sign-in"
-                  className="inline-block text-purple-600 lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] rounded-md transition-all font-medium border border-purple-600 hover:text-white hover:bg-purple-500 hover:border-purple-500"
-                >
-                  <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
-                    <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
-                      login
-                    </i>
-                    Login
-                  </span>
-                </Link>
+                {status === "loading" ? (
+                  <div className="w-[35px] h-[35px] rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                ) : session?.user ? (
+                  <ProfileMenu />
+                ) : (
+                  <>
+                    <Link
+                      href="/authentication/sign-in"
+                      className="inline-block text-purple-600 lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] rounded-md transition-all font-medium border border-purple-600 hover:text-white hover:bg-purple-500 hover:border-purple-500"
+                    >
+                      <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
+                        <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
+                          login
+                        </i>
+                        Login
+                      </span>
+                    </Link>
 
-                <Link
-                  href="/authentication/sign-up"
-                  className="inline-block lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] bg-purple-600 text-white rounded-md transition-all font-medium border border-purple-600 hover:bg-purple-500 hover:border-purple-500"
-                >
-                  <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
-                    <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
-                      person
-                    </i>
-                    Register
-                  </span>
-                </Link>
+                    <Link
+                      href="/authentication/sign-up"
+                      className="inline-block lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] bg-purple-600 text-white rounded-md transition-all font-medium border border-purple-600 hover:bg-purple-500 hover:border-purple-500"
+                    >
+                      <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
+                        <i className="material-symbols-outlined absolute ltr:left-0 rtl:right-0 top-1/2 -translate-y-1/2 !text-[20px] md:!text-[24px]">
+                          person
+                        </i>
+                        Register
+                      </span>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

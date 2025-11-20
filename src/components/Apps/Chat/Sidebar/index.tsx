@@ -1,14 +1,207 @@
 "use client";
 
-import React, { useState } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import Image from "next/image";
+import { Conversation, User } from "@/types/chat";
+import { useSession } from "next-auth/react";
 
-const Sidebar: React.FC = () => {
-  // Tabs
+interface SidebarProps {
+  onSelectConversation: (conversation: Conversation) => void;
+  selectedConversation: Conversation | null;
+}
+
+const normalizeConversation = (raw: Conversation): Conversation => {
+  return {
+    ...raw,
+    createdAt: raw.createdAt ? new Date(raw.createdAt) : new Date(),
+    updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date(),
+    lastMessageTime: raw.lastMessageTime
+      ? new Date(raw.lastMessageTime)
+      : undefined,
+  };
+};
+
+const Sidebar: React.FC<SidebarProps> = ({
+  onSelectConversation,
+  selectedConversation,
+}) => {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState(0);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleTabClick = (index: number) => {
-    setActiveTab(index);
+  const currentUserId =
+    session?.user?.id || session?.user?.email || "admin-1";
+  const currentUserRole = session?.user?.role || "admin";
+  const currentUserName = session?.user?.name || "Admin";
+  const currentUserAvatar =
+    session?.user?.image || "/images/users/user1.jpg";
+
+  const authHeaders = useCallback(() => {
+    return {
+      "x-user-id": currentUserId,
+      "x-user-role": currentUserRole,
+      "x-user-name": currentUserName,
+      "x-user-avatar": currentUserAvatar,
+    };
+  }, [currentUserAvatar, currentUserId, currentUserName, currentUserRole]);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const response = await fetch("/api/chat/conversations", {
+        headers: authHeaders(),
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const normalized = (data.conversations || []).map((conv: Conversation) =>
+        normalizeConversation(conv)
+      );
+
+      // Update conversations, preserving order and avoiding unnecessary re-renders
+      setConversations((prev) => {
+        // If conversations haven't changed, don't update
+        if (
+          prev.length === normalized.length &&
+          prev.every(
+            (p, i) =>
+              p.id === normalized[i]?.id &&
+              p.updatedAt?.getTime() === normalized[i]?.updatedAt?.getTime() &&
+              p.unreadCount === normalized[i]?.unreadCount
+          )
+        ) {
+          return prev;
+        }
+        return normalized;
+      });
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+      // Don't throw - allow polling to continue
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authHeaders]);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/chat/users", {
+        headers: authHeaders(),
+        cache: "no-store",
+      });
+      const data = await response.json();
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error("Error loading users:", error);
+    }
+  }, [authHeaders]);
+
+  // Load conversations on mount and poll periodically
+  useEffect(() => {
+    loadConversations();
+    loadUsers();
+
+    // Poll every 3 seconds for conversation updates (less frequent than messages)
+    const intervalId = setInterval(() => {
+      loadConversations();
+    }, 3000);
+    
+    return () => clearInterval(intervalId);
+  }, [loadConversations, loadUsers]);
+
+  // Keep selected conversation in sync when refreshed
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const updated = conversations.find(
+      (conversation) => conversation.id === selectedConversation.id
+    );
+
+    if (updated) {
+      // Update if conversation data changed (last message, unread count, etc.)
+      if (
+        updated.updatedAt?.getTime() !== selectedConversation.updatedAt?.getTime() ||
+        updated.lastMessage !== selectedConversation.lastMessage ||
+        updated.unreadCount !== selectedConversation.unreadCount ||
+        updated.lastMessageTime?.getTime() !== selectedConversation.lastMessageTime?.getTime()
+      ) {
+        onSelectConversation(updated);
+      }
+    }
+  }, [conversations, onSelectConversation, selectedConversation]);
+
+  const handleStartConversation = async (user: User) => {
+    try {
+      const response = await fetch("/api/chat/create-conversation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          recipientId: user.id,
+          recipientName: user.name,
+          recipientAvatar: user.avatar,
+          recipientRole: user.role,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        const normalizedConversation = normalizeConversation(data.conversation);
+        setConversations((prev) => {
+          const exists = prev.some(
+            (conv) => conv.id === normalizedConversation.id
+          );
+          return exists ? prev : [normalizedConversation, ...prev];
+        });
+        onSelectConversation(normalizedConversation);
+        setActiveTab(0); // Switch to All Messages tab
+      }
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+    }
+  };
+
+  const filteredConversations = useMemo(() => {
+    return conversations.filter((conv) =>
+      conv.participantNames.some((name) =>
+        name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+  }, [conversations, searchQuery]);
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery, users]);
+
+  const getConversationDisplay = (conversation: Conversation) => {
+    const participantIndex = conversation.participantIds.findIndex(
+      (participantId) => participantId !== currentUserId
+    );
+
+    const name =
+      participantIndex >= 0
+        ? conversation.participantNames[participantIndex]
+        : conversation.participantNames[0];
+
+    const avatar =
+      (participantIndex >= 0 &&
+        conversation.participantAvatars?.[participantIndex]) ||
+      "/images/users/user31.jpg";
+
+    return { name, avatar };
   };
 
   return (
@@ -27,694 +220,153 @@ const Sidebar: React.FC = () => {
             </label>
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="block w-full rounded-md text-black dark:text-white bg-gray-50 dark:bg-[#15203c] border border-gray-50 dark:border-[#15203c] focus:border-primary-500 h-[40px] outline-0 transition-all text-xs placeholder:text-gray-500 dark:placeholder:text-gray-400 ltr:pl-[38px] rtl:pr-[38px] ltr:pr-[15px] rtl:pl-[15px]"
-              placeholder="Search"
+              placeholder="Search conversations..."
             />
           </form>
 
-          <div className="trezo-tabs" id="trezo-tabs">
+          <div className="trezo-tabs">
             {/* Tabs navs */}
-            <ul className="chat-sidebar-navs flex border-b border-gray-100 dark:border-[#172036]">
+            <ul className="chat-sidebar-navs flex border-b border-gray-100 dark:border-[#172036] mb-[20px]">
               <li className="nav-item ltr:mr-[19px] rtl:ml-[19px] xl:ltr:mr-[30px] xl:rtl:ml-[30px] ltr:last:mr-0 rtl:last:ml-0">
                 <button
-                  onClick={() => handleTabClick(0)}
+                  onClick={() => setActiveTab(0)}
                   className={`nav-link font-medium relative pb-[8px] transition-all ${
-                    activeTab === 0 ? "active" : ""
+                    activeTab === 0 ? "active text-primary-500" : ""
                   }`}
                 >
-                  All Message
+                  Messages ({conversations.length})
                 </button>
               </li>
               <li className="nav-item ltr:mr-[19px] rtl:ml-[19px] xl:ltr:mr-[30px] xl:rtl:ml-[30px] ltr:last:mr-0 rtl:last:ml-0">
                 <button
-                  onClick={() => handleTabClick(1)}
+                  onClick={() => setActiveTab(1)}
                   className={`nav-link font-medium relative pb-[8px] transition-all ${
-                    activeTab === 1 ? "active" : ""
+                    activeTab === 1 ? "active text-primary-500" : ""
                   }`}
                 >
-                  Group Chat
-                </button>
-              </li>
-              <li className="nav-item ltr:mr-[19px] rtl:ml-[19px] xl:ltr:mr-[30px] xl:rtl:ml-[30px] ltr:last:mr-0 rtl:last:ml-0">
-                <button
-                  onClick={() => handleTabClick(2)}
-                  className={`nav-link font-medium relative pb-[8px] transition-all ${
-                    activeTab === 2 ? "active" : ""
-                  }`}
-                >
-                  Contacts
+                  Users ({users.length})
                 </button>
               </li>
             </ul>
-            
-            {/* Tabs Content */}
+
+            {/* Tab Content */}
             <div className="chat-sidebar-tab-content">
+              {/* All Conversations */}
               {activeTab === 0 && (
                 <div className="ltr:-mr-[20px] rtl:-ml-[20px] md:ltr:-mr-[25px] md:rtl:-ml-[25px]">
-                  <div className="chat-users-list overflow-y-scroll h-[476px] md:h-[559px] lg:h-[720px] xl:h-[820px] ltr:pr-[20px] rtl:pl-[20px] md:ltr:pr-[25px] md:rtl:pl-[25px] pt-[20px]">
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user31.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Sarah Smith
-                          </span>
-                          <span className="text-success-600 block text-xs mt-[2px]">
-                            Typing...
-                          </span>
-                        </div>
+                  <div className="overflow-y-auto h-[400px] md:h-[550px] lg:h-[700px] ltr:pr-[20px] rtl:pl-[20px] md:ltr:pr-[25px] md:rtl:pl-[25px]">
+                    {filteredConversations.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
+                          No conversations yet. <br /> Start a new conversation!
+                        </p>
                       </div>
-                      <span className="text-xs block">Just Now</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user6.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Michael Johnson
-                          </span>
-                          <span className="block text-xs mt-[2px] relative ltr:pl-[16px] rtl:pr-[16px]">
-                            <i className="ri-file-text-line ltr:left-0 rtl:right-0 absolute top-1/2 -translate-y-1/2 -mt-[.5px]"></i>
-                            Attachment...
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">10:20 AM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user7.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Emily Brown
-                          </span>
-                          <span className="block text-xs mt-[2px] relative ltr:pl-[16px] rtl:pr-[16px]">
-                            <i className="ri-mic-line ltr:left-0 rtl:right-0 absolute top-1/2 -translate-y-1/2 -mt-[.5px]"></i>
-                            Voice message
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">9:30 AM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user8.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            David Martinez
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Excellent work...
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">3:20 PM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user9.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Jessica Taylor
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Hello! Mr.. 🔥
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">12:00 AM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user10.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Christopher Lee
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Very good...
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">8:30 PM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user11.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Amanda Rodriguez
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            That’s cool...
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">2:20 PM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user12.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Daniel Garcia
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Good morning!😀
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">10:00 PM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user13.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Jennifer Thomas
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Hi John!
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">11:10 AM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user14.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Elizabeth Clark
-                          </span>
-                          <span className="text-success-600 block text-xs mt-[2px]">
-                            Sounds good...
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">12:30 PM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user15.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            William Lewis
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            How are you?😐
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">11:20 AM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user16.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Michelle King
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Good evening!
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">10:40 PM</span>
-                    </div>
+                    ) : (
+                      <>
+                        {isLoading && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-[10px]">
+                            Refreshing conversations...
+                          </p>
+                        )}
+                        {filteredConversations.map((conv) => {
+                        const display = getConversationDisplay(conv);
+                        return (
+                          <div
+                            key={conv.id}
+                            onClick={() => onSelectConversation(conv)}
+                            className={`flex items-center justify-between mb-[15px] pb-[15px] px-[12px] py-[10px] border border-transparent rounded-md cursor-pointer transition-all ${
+                              selectedConversation?.id === conv.id
+                                ? "bg-primary-50 dark:bg-primary-900 border-primary-200 dark:border-primary-700"
+                                : "hover:bg-gray-50 dark:hover:bg-[#172036]"
+                            } last:border-0 last:pb-0 last:mb-0`}
+                          >
+                            <div className="flex items-center gap-[12px] flex-1 min-w-0">
+                              <Image
+                                src={display.avatar}
+                                alt={display.name}
+                                className="rounded-full w-[40px] h-[40px] flex-shrink-0"
+                                width={40}
+                                height={40}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <h6 className="font-semibold text-sm text-black dark:text-white truncate">
+                                  {display.name}
+                                </h6>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  {conv.lastMessage || "No messages yet"}
+                                </p>
+                              </div>
+                            </div>
+                            {conv.unreadCount > 0 && (
+                              <span className="inline-flex items-center justify-center bg-primary-500 text-white text-xs font-medium rounded-full w-[20px] h-[20px] flex-shrink-0">
+                                {conv.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                      </>
+                    )}
                   </div>
                 </div>
               )}
 
+              {/* Users List */}
               {activeTab === 1 && (
                 <div className="ltr:-mr-[20px] rtl:-ml-[20px] md:ltr:-mr-[25px] md:rtl:-ml-[25px]">
-                  <div className="mt-[20px] ltr:pr-[20p] rtl:pl-[20px] ltr:md:pr-[25px] rtl:md:pl-[20px]">
-                    <button
-                      type="button"
-                      className="block w-full text-center py-[11.8px] px-[22px] text-white bg-primary-500 transition-all text-md font-medium hover:bg-primary-400"
-                    >
-                      + Create New Group
-                    </button>
-                  </div>
-
-                  <div className="chat-users-list overflow-y-scroll h-[476px] md:h-[559px] lg:h-[720px] xl:h-[820px] ltr:pr-[20px] rtl:pl-[20px] md:ltr:pr-[25px] md:rtl:pl-[25px] pt-[20px]">
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/products/product1.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            UI/UX Designer Group
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Divan: Sure I’ll submit the file...
-                          </span>
-                        </div>
+                  <div className="overflow-y-auto h-[400px] md:h-[550px] lg:h-[700px] ltr:pr-[20px] rtl:pl-[20px] md:ltr:pr-[25px] md:rtl:pl-[25px]">
+                    {filteredUsers.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                          No users found
+                        </p>
                       </div>
-                      <span className="text-xs block">Just Now</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/products/product2.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
+                    ) : (
+                      filteredUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center justify-between mb-[15px] pb-[15px] px-[12px] py-[10px] border border-transparent rounded-md hover:bg-gray-50 dark:hover:bg-[#172036] transition-all"
+                        >
+                          <div className="flex items-center gap-[12px]">
+                            <div className="relative">
+                              <Image
+                                src={user.avatar}
+                                alt={user.name}
+                                className="rounded-full w-[40px] h-[40px]"
+                                width={40}
+                                height={40}
+                              />
+                              <span
+                                className={`absolute w-[10px] h-[10px] rounded-full border-[2px] border-white dark:border-[#0c1427] bottom-0 ltr:right-0 rtl:left-0 ${
+                                  user.status === "online"
+                                    ? "bg-success-500"
+                                    : user.status === "away"
+                                    ? "bg-yellow-500"
+                                    : "bg-gray-400"
+                                }`}
+                              ></span>
+                            </div>
+                            <div>
+                              <h6 className="font-semibold text-sm text-black dark:text-white">
+                                {user.name}
+                              </h6>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {user.role}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleStartConversation(user)}
+                            className="px-[12px] py-[6px] bg-primary-500 text-white text-xs font-medium rounded-md hover:bg-primary-400 transition-all"
+                          >
+                            Chat
+                          </button>
                         </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Web Development Group
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Divan:{" "}
-                            <span className="text-success-600">Typing...</span>
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">10:20 AM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/products/product3.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Discussion Group
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Divan: Great ! 🔥
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">9:30 AM</span>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/products/product4.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Design Group
-                          </span>
-                          <span className="block text-xs mt-[2px]">
-                            Olivia: Hello! Mr..
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs block">12:00 AM</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 2 && (
-                <div className="ltr:-mr-[20px] rtl:-ml-[20px] md:ltr:-mr-[25px] md:rtl:-ml-[25px]">
-                  <div className="chat-users-list overflow-y-scroll h-[476px] md:h-[559px] lg:h-[720px] xl:h-[820px] ltr:pr-[20px] rtl:pl-[20px] md:ltr:pr-[25px] md:rtl:pl-[25px] pt-[20px]">
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user31.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Sarah Smith
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user6.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Michael Johnson
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user7.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Emily Brown
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user8.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            David Martinez
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user9.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Jessica Taylor
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user10.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Christopher Lee
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user11.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Amanda Rodriguez
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user12.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-success-500 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Daniel Garcia
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user13.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Jennifer Thomas
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user14.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Elizabeth Clark
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user15.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            William Lewis
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-[13.5px] pb-[13.5px] border-b border-gray-100 dark:border-[#172036] last:border-0 last:pb-0 last:mb-0">
-                      <div className="flex items-center">
-                        <div className="relative ltr:mr-[10px] rtl:ml-[10px]">
-                          <Image
-                            src="/images/users/user16.jpg"
-                            alt="user-image"
-                            className="rounded-full w-[35px]"
-                            width={35}
-                            height={35}
-                          />
-                          <span className="absolute ltr:right-0 rtl:left-0 bottom-0 w-[10px] h-[10px] rounded-full bg-orange-400 border-[2px] border-white dark:border-[#0c1427]"></span>
-                        </div>
-                        <div>
-                          <span className="block font-semibold text-black dark:text-white">
-                            Michelle King
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}

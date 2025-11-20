@@ -11,6 +11,7 @@ import "../globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/FrontPage/Navbar";
+import FloatingChatbot from "@/components/FloatingChatbot";
 
 const inter = Inter({
   variable: "--font-body",
@@ -22,6 +23,8 @@ export const metadata: Metadata = {
   description: "Tailwind Nextjs Admin Dashboard Templat",
 };
 
+import { Providers } from "../providers";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,9 +33,11 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body className={`${inter.variable} antialiased`}>
-        <Navbar />
-
-        <div className=" pt-28">{children}</div>
+        <Providers>
+          <Navbar />
+          <div className=" ">{children}</div>
+          <FloatingChatbot />
+        </Providers>
       </body>
     </html>
   );

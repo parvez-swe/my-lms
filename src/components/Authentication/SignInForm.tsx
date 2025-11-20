@@ -1,10 +1,69 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const SignInForm: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard/ecommerce/";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      // First check if email is verified before attempting sign in
+      const checkResponse = await fetch("/api/auth/check-email-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (checkResponse.ok) {
+        const checkResult = await checkResponse.json();
+        if (!checkResult.verified) {
+          setError("Please verify your email before signing in. Check your inbox for the verification link.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        if (result.error === "CredentialsSignin") {
+          setError("Invalid email or password");
+        } else {
+          setError(result.error || "An error occurred during sign in");
+        }
+      } else if (result?.ok) {
+        router.push(callbackUrl);
+        router.refresh();
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="auth-main-content bg-white dark:bg-[#0a0e19] py-[60px] md:py-[80px] lg:py-[135px]">
@@ -45,102 +104,71 @@ const SignInForm: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between mb-[20px] md:mb-[23px] gap-[12px]">
-                <div className="grow">
+              {error && (
+                <div className="mb-[20px] p-[15px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <div className="mb-[15px] relative">
+                  <label className="mb-[10px] md:mb-[12px] text-black dark:text-white font-medium block">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
+                    placeholder="example@trezo.com"
+                  />
+                </div>
+
+                <div className="mb-[15px] relative" id="passwordHideShow">
+                  <label className="mb-[10px] md:mb-[12px] text-black dark:text-white font-medium block">
+                    Password
+                  </label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
+                    id="password"
+                    placeholder="Type password"
+                  />
                   <button
+                    className="absolute text-lg ltr:right-[20px] rtl:left-[20px] bottom-[12px] transition-all hover:text-primary-500"
+                    id="toggleButton"
                     type="button"
-                    className="block text-center w-full rounded-md transition-all py-[8px] md:py-[10.5px] px-[15px] md:px-[25px] text-black dark:text-white border border-[#D6DAE1] bg-white dark:bg-[#0a0e19] dark:border-[#172036] shadow-sm hover:border-primary-500"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    <Image
-                      src="/images/icons/google.svg"
-                      className="inline-block"
-                      alt="google"
-                      width={25}
-                      height={25}
-                    />
+                    <i className={showPassword ? "ri-eye-line" : "ri-eye-off-line"}></i>
                   </button>
                 </div>
 
-                <div className="grow">
-                  <button
-                    type="button"
-                    className="block text-center w-full rounded-md transition-all py-[8px] md:py-[10.5px] px-[15px] md:px-[25px] text-black dark:text-white border border-[#D6DAE1] bg-white dark:bg-[#0a0e19] dark:border-[#172036] shadow-sm hover:border-primary-500"
-                  >
-                    <Image
-                      src="/images/icons/facebook2.svg"
-                      className="inline-block"
-                      alt="google"
-                      width={25}
-                      height={25}
-                    />
-                  </button>
-                </div>
-
-                <div className="grow">
-                  <button
-                    type="button"
-                    className="block text-center w-full rounded-md transition-all py-[8px] md:py-[10.5px] px-[15px] md:px-[25px] text-black dark:text-white border border-[#D6DAE1] bg-white dark:bg-[#0a0e19] dark:border-[#172036] shadow-sm hover:border-primary-500"
-                  >
-                    <Image
-                      src="/images/icons/apple.svg"
-                      className="inline-block"
-                      alt="google"
-                      width={25}
-                      height={25}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-[15px] relative">
-                <label className="mb-[10px] md:mb-[12px] text-black dark:text-white font-medium block">
-                  Email Address
-                </label>
-                <input
-                  type="text"
-                  className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                  placeholder="example@trezo.com"
-                />
-              </div>
-
-              <div className="mb-[15px] relative" id="passwordHideShow">
-                <label className="mb-[10px] md:mb-[12px] text-black dark:text-white font-medium block">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                  id="password"
-                  placeholder="Type password"
-                />
-                <button
-                  className="absolute text-lg ltr:right-[20px] rtl:left-[20px] bottom-[12px] transition-all hover:text-primary-500"
-                  id="toggleButton"
-                  type="button"
+                <Link
+                  href="/authentication/forgot-password"
+                  className="inline-block text-primary-500 transition-all font-semibold hover:underline mb-[20px]"
                 >
-                  <i className="ri-eye-off-line"></i>
+                  Forgot Password?
+                </Link>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="md:text-md block w-full text-center transition-all rounded-md font-medium mt-[20px] md:mt-[25px] py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="flex items-center justify-center gap-[5px]">
+                    <i className="material-symbols-outlined">login</i>
+                    {loading ? "Signing In..." : "Sign In"}
+                  </span>
                 </button>
-              </div>
-
-              <Link
-                href="/authentication/forgot-password"
-                className="inline-block text-primary-500 transition-all font-semibold hover:underline"
-              >
-                Forgot Password?
-              </Link>
-
-              <button
-                type="submit"
-                className="md:text-md block w-full text-center transition-all rounded-md font-medium mt-[20px] md:mt-[25px] py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400"
-              >
-                <span className="flex items-center justify-center gap-[5px]">
-                  <i className="material-symbols-outlined">login</i>
-                  Sign In
-                </span>
-              </button>
+              </form>
 
               <p className="mt-[15px] md:mt-[20px]">
-                Don’t have an account.{" "}
+                Don't have an account.{" "}
                 <Link
                   href="/authentication/sign-up"
                   className="text-primary-500 transition-all font-semibold hover:underline"
