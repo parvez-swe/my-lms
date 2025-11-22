@@ -1,7 +1,13 @@
 import CourseDetailsContent from "@/components/LMS/CourseDetailsContent";
 import Link from "next/link";
 
-export default function Page() {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ courseId: string }>;
+}) {
+  const { courseId } = await params;
+
   return (
     <>
       <div className="mb-[25px] md:flex items-center justify-between">
@@ -30,7 +36,7 @@ export default function Page() {
         </ol>
       </div>
 
-      <CourseDetailsContent />
+      <CourseDetailsContent courseId={courseId} />
     </>
   );
 }

@@ -17,8 +17,7 @@ export async function GET() {
 
     // Convert MongoDB documents to Course format (remove _id, add slug)
     const coursesData: Course[] = courses.map((course) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { _id, ...courseData } = course;
+      const { _id: _courseId, ...courseData } = course;
       return courseData as Course;
     });
 

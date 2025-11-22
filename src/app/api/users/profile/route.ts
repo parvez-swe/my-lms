@@ -7,7 +7,7 @@ import { ObjectId } from "mongodb";
 export const dynamic = "force-dynamic";
 
 // GET - Get user profile
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
 
@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, emailVerificationToken, emailVerificationTokenExpiry, _id, ...userData } = user;
+    const { password: _password, emailVerificationToken: _emailToken, emailVerificationTokenExpiry: _expiry, _id: __id, ...userData } = user;
 
     return NextResponse.json({
       success: true,
@@ -93,8 +92,7 @@ export async function PUT(request: NextRequest) {
       .collection<UserDocument>("users")
       .findOne({ _id: userId });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, emailVerificationToken, emailVerificationTokenExpiry, _id, ...userData } = updatedUser!;
+    const { password: _password, emailVerificationToken: _emailToken, emailVerificationTokenExpiry: _expiry, _id: __id, ...userData } = updatedUser!;
 
     return NextResponse.json({
       success: true,
@@ -109,4 +107,3 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
-

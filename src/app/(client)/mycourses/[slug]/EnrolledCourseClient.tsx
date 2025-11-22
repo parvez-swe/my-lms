@@ -55,7 +55,7 @@ const StarRating = ({ rating }: { rating: number }) => {
 
 interface EnrolledCourseClientProps {
   course: Course;
-  enrollment: EnrollmentDocument;
+  enrollment: Omit<EnrollmentDocument, "_id" | "userId"> & { _id?: string; userId: string };
 }
 
 const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({

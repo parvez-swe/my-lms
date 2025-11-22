@@ -1,11 +1,11 @@
 "use client";
 import React, { createContext, useState, useContext, ReactNode } from "react";
-import { courses, Course } from "@/data/courses";
+import { Course } from "@/data/courses";
 
 interface CartContextType {
   cart: Course[];
   addToCart: (course: Course) => void;
-  removeFromCart: (courseId: number) => void;
+  removeFromCart: (courseSlug: string) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -17,7 +17,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   const addToCart = (course: Course) => {
     setCart((prevCart) => {
-      if (prevCart.find((item) => item.id === course.id)) {
+      if (prevCart.find((item) => item.slug === course.slug)) {
         alert(`${course.title} is already in your cart.`);
         return prevCart;
       }
@@ -26,8 +26,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
-  const removeFromCart = (courseId: number) => {
-    setCart((prevCart) => prevCart.filter((course) => course.id !== courseId));
+  const removeFromCart = (courseSlug: string) => {
+    setCart((prevCart) =>
+      prevCart.filter((course) => course.slug !== courseSlug)
+    );
   };
 
   return (

@@ -7,7 +7,7 @@ interface OverallReviewsProps {
   course: Course;
 }
 
-const OverallReviews: React.FC<OverallReviewsProps> = ({ course }) => {
+const OverallReviews: React.FC<OverallReviewsProps> = () => {
   return (
     <>
       <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">

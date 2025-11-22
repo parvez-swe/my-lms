@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { EnrollmentDocument } from "@/models/Enrollment";
+import { CourseDocument } from "@/models/Course";
 import { sendEnrollmentStatusEmail } from "@/lib/email";
 import { ObjectId } from "mongodb";
 
@@ -78,7 +79,7 @@ export async function PUT(
       .collection("users")
       .findOne({ _id: new ObjectId(enrollment.userId) });
     const course = await db
-      .collection("courses")
+      .collection<CourseDocument>("courses")
       .findOne({ slug: enrollment.courseSlug });
 
     // Send status update email if status changed to approved or rejected
@@ -91,7 +92,7 @@ export async function PUT(
       await sendEnrollmentStatusEmail(
         user.email,
         user.name,
-        course as any,
+        course,
         status as "approved" | "rejected"
       );
     }
@@ -100,8 +101,7 @@ export async function PUT(
       .collection<EnrollmentDocument>("enrollments")
       .findOne({ _id: enrollmentId });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, ...enrollmentData } = updatedEnrollment!;
+    const { _id: _enrollmentId, ...enrollmentData } = updatedEnrollment!;
 
     return NextResponse.json({
       success: true,
@@ -185,7 +185,7 @@ export async function GET(
 
     // Remove sensitive data from user
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userData } = user as any;
+    const { password, ...userData } = user as unknown as { password: string };
 
     return NextResponse.json({
       success: true,

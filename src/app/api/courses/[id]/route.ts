@@ -34,8 +34,7 @@ export async function GET(
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, ...courseData } = course;
+    const { _id: _courseId, ...courseData } = course;
     return NextResponse.json({ success: true, data: courseData as Course });
   } catch (error) {
     console.error("Failed to fetch course:", error);
@@ -118,8 +117,7 @@ export async function PUT(
     const updated = await db
       .collection<CourseDocument>("courses")
       .findOne(query);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, ...courseData } = updated!;
+    const { _id: _courseId, ...courseData } = updated!;
 
     return NextResponse.json({ success: true, data: courseData as Course });
   } catch (error) {

@@ -15,11 +15,16 @@ export default function AchievementCard({
 }: AchievementCardProps) {
   // Calculate next milestone
   const milestones = [25, 50, 75, 100];
-  const nextMilestone = milestones.find((milestone) => progressPercentage < milestone) || 100;
-  const currentMilestone = milestones.filter((milestone) => progressPercentage >= milestone).pop() || 0;
-  
-  const lessonsForNextMilestone = Math.ceil((totalLessons * nextMilestone) / 100);
-  const lessonsRemaining = Math.max(0, lessonsForNextMilestone - completedLessons);
+  const nextMilestone =
+    milestones.find((milestone) => progressPercentage < milestone) || 100;
+
+  const lessonsForNextMilestone = Math.ceil(
+    (totalLessons * nextMilestone) / 100
+  );
+  const lessonsRemaining = Math.max(
+    0,
+    lessonsForNextMilestone - completedLessons
+  );
 
   const getMessage = () => {
     if (progressPercentage === 100) {
@@ -41,15 +46,14 @@ export default function AchievementCard({
         <h3 className="text-xl font-bold">Your Achievement</h3>
         <Award size={32} className="text-yellow-300" />
       </div>
-      <p className="text-purple-100 mb-4">
-        {getMessage()}
-      </p>
+      <p className="text-purple-100 mb-4">{getMessage()}</p>
       {progressPercentage < 100 ? (
         <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
           <p className="text-sm mb-2">Next Milestone</p>
           <p className="text-2xl font-bold">{nextMilestone}% Complete</p>
           <p className="text-sm text-purple-100 mt-1">
-            {lessonsRemaining} {lessonsRemaining === 1 ? "lesson" : "lessons"} to go
+            {lessonsRemaining} {lessonsRemaining === 1 ? "lesson" : "lessons"}{" "}
+            to go
           </p>
         </div>
       ) : (

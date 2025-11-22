@@ -1,25 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getDatabase } from "@/lib/mongodb";
 import { UserDocument } from "@/models/User";
-import { DEFAULT_CHAT_AVATAR, mapUserRoleToChatRole } from "@/lib/chatRepository";
+import {
+  DEFAULT_CHAT_AVATAR,
+  mapUserRoleToChatRole,
+} from "@/lib/chatRepository";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/chat/get-admin - Get the first admin user for visitor conversations
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const db = await getDatabase();
-    
+
     // Find the first admin or superadmin user
-    const adminUser = await db
-      .collection<UserDocument>("users")
-      .findOne(
-        { role: { $in: ["admin", "superadmin"] } },
-        { 
-          projection: { name: 1, email: 1, role: 1, image: 1 },
-          sort: { createdAt: 1 } // Get the first admin created
-        }
-      );
+    const adminUser = await db.collection<UserDocument>("users").findOne(
+      { role: { $in: ["admin", "superadmin"] } },
+      {
+        projection: { name: 1, email: 1, role: 1, image: 1 },
+        sort: { createdAt: 1 }, // Get the first admin created
+      }
+    );
 
     if (!adminUser) {
       // If no admin exists, return a default admin ID
@@ -52,4 +53,3 @@ export async function GET(request: NextRequest) {
     });
   }
 }
-

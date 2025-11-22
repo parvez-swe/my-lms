@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const SignInForm: React.FC = () => {
+const SignInFormInner: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard/ecommerce/";
+  const callbackUrl =
+    searchParams.get("callbackUrl") || "/dashboard/ecommerce/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +36,9 @@ const SignInForm: React.FC = () => {
       if (checkResponse.ok) {
         const checkResult = await checkResponse.json();
         if (!checkResult.verified) {
-          setError("Please verify your email before signing in. Check your inbox for the verification link.");
+          setError(
+            "Please verify your email before signing in. Check your inbox for the verification link."
+          );
           setLoading(false);
           return;
         }
@@ -57,7 +60,7 @@ const SignInForm: React.FC = () => {
         router.push(callbackUrl);
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -106,7 +109,9 @@ const SignInForm: React.FC = () => {
 
               {error && (
                 <div className="mb-[20px] p-[15px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-                  <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+                  <p className="text-red-600 dark:text-red-400 text-sm">
+                    {error}
+                  </p>
                 </div>
               )}
 
@@ -144,7 +149,11 @@ const SignInForm: React.FC = () => {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    <i className={showPassword ? "ri-eye-line" : "ri-eye-off-line"}></i>
+                    <i
+                      className={
+                        showPassword ? "ri-eye-line" : "ri-eye-off-line"
+                      }
+                    ></i>
                   </button>
                 </div>
 
@@ -168,7 +177,7 @@ const SignInForm: React.FC = () => {
               </form>
 
               <p className="mt-[15px] md:mt-[20px]">
-                Don't have an account.{" "}
+                Don&apos;t have an account.{" "}
                 <Link
                   href="/authentication/sign-up"
                   className="text-primary-500 transition-all font-semibold hover:underline"
@@ -181,6 +190,14 @@ const SignInForm: React.FC = () => {
         </div>
       </div>
     </>
+  );
+};
+
+const SignInForm: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignInFormInner />
+    </Suspense>
   );
 };
 

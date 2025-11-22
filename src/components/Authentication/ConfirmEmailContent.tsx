@@ -1,48 +1,50 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 
-const ConfirmEmailContent: React.FC = () => {
+const ConfirmEmailContentInner: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
   const pending = searchParams.get("pending");
 
-  const [status, setStatus] = useState<"loading" | "success" | "error" | "pending">(
-    pending === "true" ? "pending" : token ? "loading" : "pending"
-  );
+  const [status, setStatus] = useState<
+    "loading" | "success" | "error" | "pending"
+  >(pending === "true" ? "pending" : token ? "loading" : "pending");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    const verifyEmail = async (verificationToken: string) => {
+      try {
+        const response = await fetch(
+          `/api/auth/verify-email?token=${verificationToken}`
+        );
+        const result = await response.json();
+
+        if (result.success) {
+          setStatus("success");
+          setMessage("Your email has been verified successfully!");
+          // Redirect to sign in after 3 seconds
+          setTimeout(() => {
+            router.push("/authentication/sign-in");
+          }, 3000);
+        } else {
+          setStatus("error");
+          setMessage(result.error || "Verification failed");
+        }
+      } catch {
+        setStatus("error");
+        setMessage("An error occurred during verification");
+      }
+    };
+
     if (token) {
       verifyEmail(token);
     }
-  }, [token]);
-
-  const verifyEmail = async (verificationToken: string) => {
-    try {
-      const response = await fetch(`/api/auth/verify-email?token=${verificationToken}`);
-      const result = await response.json();
-
-      if (result.success) {
-        setStatus("success");
-        setMessage("Your email has been verified successfully!");
-        // Redirect to sign in after 3 seconds
-        setTimeout(() => {
-          router.push("/authentication/sign-in");
-        }, 3000);
-      } else {
-        setStatus("error");
-        setMessage(result.error || "Verification failed");
-      }
-    } catch (error) {
-      setStatus("error");
-      setMessage("An error occurred during verification");
-    }
-  };
+  }, [token, router]);
 
   return (
     <>
@@ -86,8 +88,10 @@ const ConfirmEmailContent: React.FC = () => {
                   {status === "pending"
                     ? "We've sent a verification link to your email. Please check your inbox and click the link to verify your account."
                     : status === "success"
-                    ? message || "Your email has been verified successfully! You can now sign in to your account."
-                    : message || "There was an error verifying your email. The link may have expired or is invalid."}
+                    ? message ||
+                      "Your email has been verified successfully! You can now sign in to your account."
+                    : message ||
+                      "There was an error verifying your email. The link may have expired or is invalid."}
                 </p>
               </div>
 
@@ -105,7 +109,9 @@ const ConfirmEmailContent: React.FC = () => {
 
               {status === "error" && (
                 <div className="flex items-center justify-center bg-[#f5f7f8] text-red-600 rounded-full w-[120px] h-[120px] dark:bg-[#15203c] mb-[20px]">
-                  <i className="material-symbols-outlined !text-[55px]">error</i>
+                  <i className="material-symbols-outlined !text-[55px]">
+                    error
+                  </i>
                 </div>
               )}
 
@@ -172,6 +178,14 @@ const ConfirmEmailContent: React.FC = () => {
         </div>
       </div>
     </>
+  );
+};
+
+const ConfirmEmailContent: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ConfirmEmailContentInner />
+    </Suspense>
   );
 };
 

@@ -67,7 +67,9 @@ export default async function LessonPage({ params }: LessonPageParams) {
       });
 
     // Serialize MongoDB document to plain object (convert ObjectIds to strings)
-    enrollment = serializeEnrollment(enrollmentDoc);
+    enrollment = serializeEnrollment(
+      enrollmentDoc
+    ) as EnrollmentDocument | null;
     if (enrollment && !enrollment.userId) {
       enrollment.userId = session.user.id;
     }

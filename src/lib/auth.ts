@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { getDatabase } from "@/lib/mongodb";
-import { UserDocument } from "@/models/User";
+import { UserDocument, UserRole } from "@/models/User";
 import bcrypt from "bcryptjs";
 
 // Validate required environment variables
@@ -27,14 +27,14 @@ export const authOptions: NextAuthConfig = {
           const db = await getDatabase();
           const user = await db
             .collection<UserDocument>("users")
-            .findOne({ email: credentials.email });
+            .findOne({ email: credentials.email as string });
 
           if (!user) {
             return null;
           }
 
           const isPasswordValid = await bcrypt.compare(
-            credentials.password,
+            credentials.password as string,
             user.password
           );
 
@@ -55,7 +55,7 @@ export const authOptions: NextAuthConfig = {
             role: user.role,
             image: user.image,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Auth error:", error);
           return null;
         }
@@ -72,7 +72,8 @@ export const authOptions: NextAuthConfig = {
     },
     async session({ session, token }) {
       if (session.user && token) {
-        session.user.role = (token.role as string) || "student";
+        const role = (token.role as string) || "student";
+        session.user.role = role as UserRole;
         session.user.id = (token.id as string) || "";
       }
       return session;
@@ -92,4 +93,3 @@ export const authOptions: NextAuthConfig = {
 
 // Create auth instance for use in API routes
 export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
-

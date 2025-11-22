@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
-import { LessonCommentDocument, LessonCommentReply } from "@/models/LessonComment";
+import { LessonCommentDocument } from "@/models/LessonComment";
 import { ObjectId } from "mongodb";
 import { UserDocument } from "@/models/User";
 
@@ -122,7 +122,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { courseSlug, moduleIndex, lessonIndex, text } = body;
 
-    if (!courseSlug || moduleIndex === undefined || lessonIndex === undefined || !text?.trim()) {
+    if (
+      !courseSlug ||
+      moduleIndex === undefined ||
+      lessonIndex === undefined ||
+      !text?.trim()
+    ) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
         { status: 400 }
@@ -212,4 +217,3 @@ function getTimeAgo(date: Date): string {
     return new Date(date).toLocaleDateString();
   }
 }
-

@@ -40,8 +40,7 @@ export async function GET(
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, ...enrollmentData } = enrollment;
+    const { _id: _enrollmentId, ...enrollmentData } = enrollment;
 
     return NextResponse.json({
       success: true,

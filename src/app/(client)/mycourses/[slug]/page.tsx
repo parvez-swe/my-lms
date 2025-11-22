@@ -46,7 +46,7 @@ const EnrolledCoursePage = async ({
   }
 
   // Fetch enrollment data
-  let enrollment: EnrollmentDocument | null = null;
+  let enrollment: (Omit<EnrollmentDocument, "_id" | "userId"> & { _id?: string; userId: string }) | null = null;
   try {
     const db = await getDatabase();
     const userId = new ObjectId(session.user.id);

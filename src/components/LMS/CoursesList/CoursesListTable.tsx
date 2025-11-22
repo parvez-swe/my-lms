@@ -3,12 +3,10 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { Course } from "@/data/courses";
 
 const CoursesListTable: React.FC = () => {
-  const router = useRouter();
   const [selectedOption, setSelectedOption] = useState<string>("All Courses");
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);

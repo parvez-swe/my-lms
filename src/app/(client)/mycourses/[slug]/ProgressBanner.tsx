@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { Download, Share2, Loader2, Check } from "lucide-react";
 
+interface Module {
+  lessons: Lesson[];
+}
+
+interface Lesson {
+  resources?: Array<{ name: string; url: string }>;
+}
+
 interface ProgressBannerProps {
   courseTitle: string;
   completedLessons: number;
@@ -74,8 +82,8 @@ export default function ProgressBanner({
         const course = result.data;
         const resources: { name: string; url: string }[] = [];
 
-        course.modules.forEach((module: any) => {
-          module.lessons.forEach((lesson: any) => {
+        course.modules.forEach((module: Module) => {
+          module.lessons.forEach((lesson: Lesson) => {
             if (lesson.resources && Array.isArray(lesson.resources)) {
               resources.push(...lesson.resources);
             }
@@ -89,7 +97,10 @@ export default function ProgressBanner({
 
         // Create a text file with all resource links
         const resourcesText = resources
-          .map((resource, index) => `${index + 1}. ${resource.name}\n   ${resource.url}`)
+          .map(
+            (resource, index) =>
+              `${index + 1}. ${resource.name}\n   ${resource.url}`
+          )
           .join("\n\n");
 
         const blob = new Blob([resourcesText], { type: "text/plain" });

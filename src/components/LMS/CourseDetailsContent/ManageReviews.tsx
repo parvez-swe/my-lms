@@ -142,7 +142,7 @@ const initialReviews: Review[] = [
   },
 ];
 
-const ManageReviews: React.FC<ManageReviewsProps> = ({ course }) => {
+const ManageReviews: React.FC<ManageReviewsProps> = () => {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const reviewsPerPage = 5;

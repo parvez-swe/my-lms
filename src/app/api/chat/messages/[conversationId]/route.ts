@@ -14,14 +14,15 @@ export const dynamic = "force-dynamic";
 // GET /api/chat/messages/[conversationId] - Get messages for ONE-ON-ONE conversation
 export async function GET(
   request: NextRequest,
-  {
-    params,
-  }: { params: { conversationId: string } | Promise<{ conversationId: string }> }
+  { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
-    const { conversationId } = await Promise.resolve(params);
+    const { conversationId } = await params;
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+    const limit = Math.min(
+      parseInt(searchParams.get("limit") || "50", 10),
+      100
+    );
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
     const currentUser = getRequestParticipant(request);
@@ -65,12 +66,10 @@ export async function GET(
 // POST /api/chat/messages/[conversationId] - Send a message to ONE-ON-ONE conversation
 export async function POST(
   request: NextRequest,
-  {
-    params,
-  }: { params: { conversationId: string } | Promise<{ conversationId: string }> }
+  { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
-    const { conversationId } = await Promise.resolve(params);
+    const { conversationId } = await params;
     const body = await request.json();
     const { text, attachments } = body as {
       text?: string;
@@ -114,10 +113,7 @@ export async function POST(
 
     await markConversationRead(conversationId, currentUser.id);
 
-    return NextResponse.json(
-      { success: true, message },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, message }, { status: 201 });
   } catch (error) {
     console.error("Error sending message:", error);
     return NextResponse.json(

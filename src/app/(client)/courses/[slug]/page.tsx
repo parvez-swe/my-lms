@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import {
   Clock,
   Github,
@@ -207,10 +208,12 @@ const CourseDetailsPage = () => {
 
               <div className="flex flex-wrap items-center gap-6 mb-8 text-purple-50">
                 <div className="flex items-center">
-                  <img
+                  <Image
                     src={course.tutorImage}
                     alt={course.tutor}
                     className="w-10 h-10 rounded-full mr-3 border-2 border-purple-400"
+                    width={40}
+                    height={40}
                   />
                   <div>
                     <span className="text-purple-300 text-xs uppercase tracking-wide block">
@@ -244,10 +247,12 @@ const CourseDetailsPage = () => {
             <div className="lg:col-span-1 row-start-1 lg:row-start-auto relative z-10">
               <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-purple-100 sticky top-6">
                 <div className="relative h-48 bg-gray-200">
-                  <img
+                  <Image
                     src={course.image}
                     alt={course.title}
                     className="w-full h-full object-cover"
+                    fill
+                    priority
                   />
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/30">
@@ -485,10 +490,12 @@ const CourseDetailsPage = () => {
                       className="border p-6 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md hover:border-purple-200 transition-all"
                     >
                       <div className="flex items-center mb-4">
-                        <img
+                        <Image
                           src={testimonial.studentImage}
                           alt={testimonial.studentName}
                           className="w-12 h-12 rounded-full mr-4 bg-purple-100 border-2 border-white shadow-sm"
+                          width={48}
+                          height={48}
                         />
                         <div>
                           <p className="font-bold text-gray-900 text-sm">
@@ -525,10 +532,12 @@ const CourseDetailsPage = () => {
                     className="bg-gradient-to-r from-purple-50 to-white border border-purple-100 p-6 rounded-xl flex flex-col sm:flex-row items-start gap-4 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-20 h-20 bg-purple-100 rounded-bl-full opacity-50"></div>
-                    <img
+                    <Image
                       src={story.studentImage}
                       alt={story.studentName}
                       className="w-16 h-16 rounded-full bg-purple-200 flex-shrink-0 border-4 border-white shadow-sm z-10"
+                      width={64}
+                      height={64}
                     />
                     <div className="z-10">
                       <div className="flex items-baseline gap-2 mb-1">
@@ -566,10 +575,12 @@ const CourseDetailsPage = () => {
                 Meet Your Mentor
               </h2>
               <div className="flex items-center mb-4">
-                <img
+                <Image
                   src={course.tutorImage}
                   alt={course.tutor}
                   className="w-16 h-16 rounded-full mr-4 border-2 border-purple-100"
+                  width={64}
+                  height={64}
                 />
                 <div>
                   <p className="text-lg font-bold text-gray-900">

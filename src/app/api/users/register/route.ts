@@ -72,15 +72,8 @@ export async function POST(request: NextRequest) {
       // Don't fail registration if email fails
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const {
-      password: _,
-      _id,
-      otp: __,
-      otpExpiry: ___,
-      otpAttempts: ____,
-      ...userData
-    } = newUser;
+    // Remove sensitive data from response
+    const { password: _pwd, otp: _otpCode, otpExpiry: _otpExp, otpAttempts: _attempts, ...userData } = newUser;
 
     return NextResponse.json(
       {

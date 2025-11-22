@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { EnrollmentDocument } from "@/models/Enrollment";
+import { CourseDocument } from "@/models/Course";
 import { sendEnrollmentEmail } from "@/lib/email";
 import { ObjectId } from "mongodb";
 
@@ -65,7 +66,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch course to get details for email
-    const course = await db.collection("courses").findOne({ slug: courseSlug });
+    const course = await db
+      .collection<CourseDocument>("courses")
+      .findOne({ slug: courseSlug });
     if (!course) {
       return NextResponse.json(
         { success: false, error: "Course not found" },
@@ -115,11 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Send enrollment email
     if (session.user.email && session.user.name) {
-      await sendEnrollmentEmail(
-        session.user.email,
-        session.user.name,
-        course as any
-      );
+      await sendEnrollmentEmail(session.user.email, session.user.name, course);
     }
 
     return NextResponse.json(
@@ -139,7 +138,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - Get user's enrollments
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
 

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
-import { EnrollmentDocument } from "@/models/Enrollment";
+import { EnrollmentDocument, EnrollmentStatus } from "@/models/Enrollment";
+import { UserDocument } from "@/models/User";
+import { Filter } from "mongodb";
+import { ObjectId } from "mongodb";
 
 // Force dynamic rendering
 export const dynamic = "force-dynamic";
@@ -30,9 +33,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
 
-    const query: any = {};
+    const query: Filter<EnrollmentDocument> = {};
     if (status) {
-      query.status = status;
+      query.status = status as EnrollmentStatus;
     }
 
     const enrollments = await db
@@ -44,9 +47,13 @@ export async function GET(request: NextRequest) {
     // Fetch user and course details for each enrollment
     const enrollmentsWithDetails = await Promise.all(
       enrollments.map(async (enrollment) => {
+        const userId =
+          typeof enrollment.userId === "string"
+            ? new ObjectId(enrollment.userId)
+            : enrollment.userId;
         const user = await db
-          .collection("users")
-          .findOne({ _id: enrollment.userId });
+          .collection<UserDocument>("users")
+          .findOne({ _id: userId });
         const course = await db
           .collection("courses")
           .findOne({ slug: enrollment.courseSlug });
@@ -76,4 +83,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

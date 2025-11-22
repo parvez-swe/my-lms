@@ -6,7 +6,9 @@ import { EnrollmentDocument } from "@/models/Enrollment";
 /**
  * Serialize CourseDocument to Course (removes MongoDB-specific fields)
  */
-export function serializeCourse(courseDoc: CourseDocument | null): Course | null {
+export function serializeCourse(
+  courseDoc: CourseDocument | null
+): Course | null {
   if (!courseDoc) return null;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -20,13 +22,13 @@ export function serializeCourse(courseDoc: CourseDocument | null): Course | null
  */
 export function serializeEnrollment(
   enrollmentDoc: EnrollmentDocument | null
-): EnrollmentDocument | null {
+): Omit<EnrollmentDocument, "_id" | "userId"> & { _id?: string; userId: string } | null {
   if (!enrollmentDoc) return null;
 
   return {
     courseSlug: enrollmentDoc.courseSlug,
     status: enrollmentDoc.status,
-    _id: enrollmentDoc._id?.toString() as any,
+    _id: enrollmentDoc._id?.toString(),
     userId:
       enrollmentDoc.userId instanceof ObjectId
         ? enrollmentDoc.userId.toString()
@@ -42,6 +44,5 @@ export function serializeEnrollment(
         }
       : undefined,
     feedback: enrollmentDoc.feedback,
-  } as EnrollmentDocument;
+  } as Omit<EnrollmentDocument, "_id" | "userId"> & { _id?: string; userId: string };
 }
-

@@ -43,11 +43,9 @@ const Chat: React.FC<ChatProps> = ({
   const [selectedOption, setSelectedOption] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const currentUserId =
-    session?.user?.id || session?.user?.email || "admin-1";
+  const currentUserId = session?.user?.id || session?.user?.email || "admin-1";
   const currentUserName = session?.user?.name || "Admin";
-  const currentUserAvatar =
-    session?.user?.image || "/images/users/user1.jpg";
+  const currentUserAvatar = session?.user?.image || "/images/users/user1.jpg";
   const currentUserRole = session?.user?.role || "admin";
 
   const authHeaders = useCallback(() => {
@@ -64,72 +62,78 @@ const Chat: React.FC<ChatProps> = ({
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch messages function with deduplication
-  const fetchMessages = useCallback(async (conversationId: string, skipTimestampCheck = false) => {
-    try {
-      const response = await fetch(
-        `/api/chat/messages/${conversationId}?limit=50`,
-        {
-          headers: authHeaders(),
-          cache: "no-store",
+  const fetchMessages = useCallback(
+    async (conversationId: string, skipTimestampCheck = false) => {
+      try {
+        const response = await fetch(
+          `/api/chat/messages/${conversationId}?limit=50`,
+          {
+            headers: authHeaders(),
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+        const data = await response.json();
+        const normalizedMessages = (data.messages || []).map(
+          (message: unknown) => normalizeChatMessage(message)
+        );
 
-      const data = await response.json();
-      const normalizedMessages = (data.messages || []).map(
-        (message: unknown) => normalizeChatMessage(message)
-      );
+        // Check if we have new messages
+        if (normalizedMessages.length > 0) {
+          const latestMessage =
+            normalizedMessages[normalizedMessages.length - 1];
+          const latestTimestamp = new Date(latestMessage.timestamp);
 
-      // Check if we have new messages
-      if (normalizedMessages.length > 0) {
-        const latestMessage = normalizedMessages[normalizedMessages.length - 1];
-        const latestTimestamp = new Date(latestMessage.timestamp);
+          // Only update if we have new messages or if skipTimestampCheck is true
+          if (
+            skipTimestampCheck ||
+            !lastMessageTimestampRef.current ||
+            latestTimestamp > lastMessageTimestampRef.current
+          ) {
+            // Deduplicate messages by ID
+            setMessages((prev) => {
+              const messageMap = new Map<string, ChatMessage>();
 
-        // Only update if we have new messages or if skipTimestampCheck is true
-        if (
-          skipTimestampCheck ||
-          !lastMessageTimestampRef.current ||
-          latestTimestamp > lastMessageTimestampRef.current
-        ) {
-          // Deduplicate messages by ID
-          setMessages((prev) => {
-            const messageMap = new Map<string, ChatMessage>();
-            
-            // Add existing messages
-            prev.forEach((msg) => {
-              if (!msg.id.startsWith("temp-")) {
+              // Add existing messages
+              prev.forEach((msg: ChatMessage) => {
+                if (!msg.id.startsWith("temp-")) {
+                  messageMap.set(msg.id, msg);
+                }
+              });
+
+              // Add new messages (will overwrite duplicates)
+              normalizedMessages.forEach((msg: ChatMessage) => {
                 messageMap.set(msg.id, msg);
-              }
+              });
+
+              // Convert back to array and sort by timestamp
+              const merged = Array.from(messageMap.values()).sort(
+                (a, b) =>
+                  new Date(a.timestamp).getTime() -
+                  new Date(b.timestamp).getTime()
+              );
+
+              return merged;
             });
 
-            // Add new messages (will overwrite duplicates)
-            normalizedMessages.forEach((msg) => {
-              messageMap.set(msg.id, msg);
-            });
-
-            // Convert back to array and sort by timestamp
-            const merged = Array.from(messageMap.values()).sort(
-              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            );
-
-            return merged;
-          });
-
-          lastMessageTimestampRef.current = latestTimestamp;
+            lastMessageTimestampRef.current = latestTimestamp;
+          }
+        } else if (skipTimestampCheck) {
+          // If no messages but we're forcing an update, still set empty array
+          setMessages([]);
+          lastMessageTimestampRef.current = null;
         }
-      } else if (skipTimestampCheck) {
-        // If no messages but we're forcing an update, still set empty array
-        setMessages([]);
-        lastMessageTimestampRef.current = null;
+      } catch (error) {
+        console.error("Error loading messages:", error);
+        // Don't throw - allow polling to continue
       }
-    } catch (error) {
-      console.error("Error loading messages:", error);
-      // Don't throw - allow polling to continue
-    }
-  }, [authHeaders]);
+    },
+    [authHeaders]
+  );
 
   // Load messages when conversation changes and poll for new ones
   useEffect(() => {
@@ -162,7 +166,11 @@ const Chat: React.FC<ChatProps> = ({
 
       // Refresh when tab becomes visible
       const handleVisibilityChange = () => {
-        if (document.visibilityState === "visible" && isMounted && propSelectedConversation) {
+        if (
+          document.visibilityState === "visible" &&
+          isMounted &&
+          propSelectedConversation
+        ) {
           fetchMessages(propSelectedConversation.id, true);
         }
       };
@@ -171,7 +179,10 @@ const Chat: React.FC<ChatProps> = ({
 
       return () => {
         isMounted = false;
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
@@ -244,7 +255,7 @@ const Chat: React.FC<ChatProps> = ({
       const data = await response.json();
       if (data.success && data.message) {
         const normalized = normalizeChatMessage(data.message);
-        
+
         // Replace temp message with real one
         setMessages((prev) => {
           const filtered = prev.filter((m) => m.id !== tempMessage.id);

@@ -1,8 +1,12 @@
- 
 import EditCourseForm from "@/components/LMS/EditCourseForm";
 import Link from "next/link";
+import { Suspense } from "react";
 
-export default function Page() {
+export default function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ courseId?: string }>;
+}) {
   return (
     <>
       <div className="mb-[25px] md:flex items-center justify-between">
@@ -31,7 +35,20 @@ export default function Page() {
         </ol>
       </div>
 
-      <EditCourseForm />
+      <Suspense fallback={<div>Loading...</div>}>
+        <EditCourseFormWrapper searchParams={searchParams} />
+      </Suspense>
     </>
   );
+}
+
+async function EditCourseFormWrapper({
+  searchParams,
+}: {
+  searchParams: Promise<{ courseId?: string }>;
+}) {
+  const params = await searchParams;
+  const courseId = params.courseId || "";
+
+  return <EditCourseForm courseId={courseId} />;
 }

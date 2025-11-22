@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { MessageSquare, Send, ThumbsUp, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -135,7 +135,10 @@ function DiscussionComment({
               {isTogglingLike ? (
                 <Loader2 size={14} className="animate-spin" />
               ) : (
-                <ThumbsUp size={14} className={liked ? "fill-purple-600" : ""} />
+                <ThumbsUp
+                  size={14}
+                  className={liked ? "fill-purple-600" : ""}
+                />
               )}
               <span>{likesCount}</span>
             </button>
@@ -152,28 +155,34 @@ function DiscussionComment({
           {comment.replies && comment.replies.length > 0 && (
             <div className="ml-10 mt-4 space-y-3">
               {comment.replies.map((reply, index) => {
-                const replyDate = typeof reply.createdAt === 'string' 
-                  ? new Date(reply.createdAt) 
-                  : reply.createdAt;
+                const replyDate =
+                  typeof reply.createdAt === "string"
+                    ? new Date(reply.createdAt)
+                    : reply.createdAt;
                 return (
-                <div key={reply._id || index} className="flex items-start space-x-3">
-                  <Image
-                    src={reply.userImage || "/images/profile.jpg"}
-                    alt={reply.userName}
-                    className="w-8 h-8 rounded-full"
-                    width={32}
-                    height={32}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold text-xs">{reply.userName}</span>
-                      <span className="text-xs text-gray-500">
-                        {replyDate.toLocaleDateString()}
-                      </span>
+                  <div
+                    key={reply._id || index}
+                    className="flex items-start space-x-3"
+                  >
+                    <Image
+                      src={reply.userImage || "/images/profile.jpg"}
+                      alt={reply.userName}
+                      className="w-8 h-8 rounded-full"
+                      width={32}
+                      height={32}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold text-xs">
+                          {reply.userName}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {replyDate.toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 text-xs">{reply.text}</p>
                     </div>
-                    <p className="text-gray-700 text-xs">{reply.text}</p>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -237,7 +246,7 @@ export default function DiscussionSection({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDiscussions = async () => {
+  const fetchDiscussions = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -255,11 +264,11 @@ export default function DiscussionSection({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [courseSlug]);
 
   useEffect(() => {
     fetchDiscussions();
-  }, [courseSlug]);
+  }, [courseSlug, fetchDiscussions]);
 
   const handlePostComment = async () => {
     if (!comment.trim() || isSubmitting || !session?.user) return;
@@ -308,9 +317,7 @@ export default function DiscussionSection({
             rows={3}
             disabled={isSubmitting}
           />
-          {error && (
-            <p className="text-red-600 text-sm mt-2">{error}</p>
-          )}
+          {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
           <div className="flex justify-end mt-2">
             <button
               onClick={handlePostComment}

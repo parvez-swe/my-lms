@@ -12,6 +12,7 @@
     "@fullcalendar/daygrid": "^6.1.17",
     "@fullcalendar/interaction": "^6.1.17",
     "@fullcalendar/react": "^6.1.17",
+    "@fullcalendar/core": "^6.1.17",
     "@headlessui/react": "^2.2.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/nodemailer": "^7.0.4",
