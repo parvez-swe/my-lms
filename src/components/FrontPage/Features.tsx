@@ -1,40 +1,40 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-
-interface Feature {
-  title: string;
-  description: string;
-  icon: string;
-  bgColor: string;
-}
-
-const featuresData: Feature[] = [
-  {
-    title: "Expert-Led Courses",
-    description:
-      "Learn from industry experts who are passionate about teaching and have real-world experience.",
-    icon: "/images/front-pages/stacks.svg",
-    bgColor: "bg-primary-100",
-  },
-  {
-    title: "Hands-On Projects",
-    description:
-      "Apply what you learn with hands-on projects and build a portfolio to showcase your skills.",
-    icon: "/images/front-pages/code.svg",
-    bgColor: "bg-purple-100",
-  },
-  {
-    title: "Community Support",
-    description:
-      "Join a vibrant community of learners and get help from your peers and instructors.",
-    icon: "/images/front-pages/support_agent.svg",
-    bgColor: "bg-orange-100",
-  },
-];
+import { WhyChooseUsDocument } from "@/models/WhyChooseUs";
 
 const Features: React.FC = () => {
+  const [data, setData] = useState<Partial<WhyChooseUsDocument>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/why-choose-us');
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const jsonData = await response.json();
+        setData(jsonData);
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError("An unknown error occurred");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
   return (
     <>
       <div className="relative z-[1] py-[60px] md:py-[80px] lg:py-[100px] xl:py-[150px]">
@@ -44,16 +44,16 @@ const Features: React.FC = () => {
               <span className="absolute top-[4.5px] w-[5px] h-[5px] ltr:-left-[3.6px] rtl:-right-[3.6px] bg-purple-600 -rotate-[6.536deg]"></span>
               <span className="absolute -top-[9.5px] w-[5px] h-[5px] ltr:right-0 rtl:left-0 bg-purple-600 -rotate-[6.536deg]"></span>
               <span className="inline-block relative text-purple-600 border border-purple-600 py-[5.5px] px-[17.2px] -rotate-[6.536deg]">
-                Why Choose Us
+                {data.title}
               </span>
             </div>
             <h2 className="!mb-0 !text-[24px] md:!text-[28px] lg:!text-[34px] xl:!text-[36px] -tracking-[.5px] md:-tracking-[.6px] lg:-tracking-[.8px] xl:-tracking-[1px] !leading-[1.2]">
-              The Best Learning Experience
+              {data.subtitle}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[25px]">
-            {featuresData.map((feature, index) => (
+            {(data.features || []).map((feature, index) => (
               <div
                 key={index}
                 className="text-center ltr:lg:text-left rtl:lg:text-right"

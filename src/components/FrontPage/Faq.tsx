@@ -1,48 +1,43 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { FaqDocument } from "@/models/Faq";
 
 const Faq: React.FC = () => {
-  // Initialize openIndex to 0 to open the first item by default
   const [openIndex, setOpenIndex] = React.useState<number | null>(0);
+  const [data, setData] = useState<Partial<FaqDocument>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/faq');
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const jsonData = await response.json();
+        setData(jsonData);
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError("An unknown error occurred");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const toggleAccordion = (index: number) => {
     setOpenIndex((prevIndex) => (prevIndex === index ? null : index));
   };
-
-  // Personalized FAQ Data based on your profile
-  const faqData = [
-    {
-      question: "Who is the instructor?",
-      answer:
-        "I am Parvez Musharaf, a final-year Software Engineering student at Daffodil International University and a Top-Rated Full Stack Developer on Upwork. I combine academic knowledge with real-world freelancing experience to teach you industry-standard coding.",
-    },
-    {
-      question: "What technologies will I learn here?",
-      answer:
-        "My primary focus is the MERN Stack (MongoDB, Express, React, Node.js) and Next.js. I also cover essential tools like TypeScript, Tailwind CSS, Prisma, and PostgreSQL to help you build modern, scalable web applications.",
-    },
-    {
-      question: "Is this suitable for absolute beginners?",
-      answer:
-        "Yes! I cover everything from the fundamentals of HTML, CSS, and JavaScript to advanced backend architecture. Whether you are just starting or looking to upgrade your skills to Next.js, you will find valuable content.",
-    },
-    {
-      question: "Do you provide freelancing guidelines?",
-      answer:
-        "Absolutely. Aside from coding, I share my personal strategies for succeeding on platforms like Upwork and Fiverr. I teach you how to write winning proposals, manage clients, and deliver high-quality work to maintain a 100% Job Success Score.",
-    },
-    {
-      question: "Where can I find the source code for the tutorials?",
-      answer:
-        "All source code for my projects and tutorials is available on my GitHub profile. I believe in open-source learning, so you can clone the repos and practice along with the videos.",
-    },
-    {
-      question: "How can I hire you for a project?",
-      answer:
-        "If you need a custom web application or SaaS solution, you can hire me directly through Upwork or contact me via my portfolio website. I specialize in building business-ready applications with clean architecture.",
-    },
-  ];
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <>
@@ -53,13 +48,11 @@ const Faq: React.FC = () => {
               <span className="absolute top-[4.5px] w-[5px] h-[5px] ltr:-left-[3.6px] rtl:-right-[3.6px] bg-purple-600 -rotate-[6.536deg]"></span>
               <span className="absolute -top-[9.5px] w-[5px] h-[5px] ltr:right-0 rtl:left-0 bg-purple-600 -rotate-[6.536deg]"></span>
               <span className="inline-block relative text-purple-600 border border-purple-600 py-[5.5px] px-[17.2px] -rotate-[6.536deg]">
-                FAQ&apos;s
-                <span className="absolute -bottom-[2.5px] w-[5px] h-[5px] ltr:-left-[3.5px] rtl:-right-[3.5px] bg-purple-600 -rotate-[6.536deg]"></span>
-                <span className="absolute -bottom-[2.5px] w-[5px] h-[5px] ltr:-right-[3.5px] rtl:-left-[3.5px] bg-purple-600 -rotate-[6.536deg]"></span>
+                {data.title}
               </span>
             </div>
             <h2 className="!mb-0 !text-[24px] md:!text-[28px] lg:!text-[34px] xl:!text-[36px] -tracking-[.5px] md:-tracking-[.6px] lg:-tracking-[.8px] xl:-tracking-[1px] !leading-[1.2]">
-              Common Questions About The Course & Mentorship
+              {data.subtitle}
             </h2>
           </div>
 
@@ -67,7 +60,7 @@ const Faq: React.FC = () => {
             className="toc-accordion mx-auto md:max-w-[738px]"
             id="tablesOfContentAccordion"
           >
-            {faqData.map((item, index) => (
+            {(data.faqs || []).map((item, index) => (
               <div
                 key={index}
                 className="toc-accordion-item bg-white dark:bg-[#0c1427] rounded-md text-black dark:text-white mb-[15px] last:mb-0"

@@ -55,7 +55,10 @@ const StarRating = ({ rating }: { rating: number }) => {
 
 interface EnrolledCourseClientProps {
   course: Course;
-  enrollment: Omit<EnrollmentDocument, "_id" | "userId"> & { _id?: string; userId: string };
+  enrollment: Omit<EnrollmentDocument, "_id" | "userId"> & {
+    _id?: string;
+    userId: string;
+  };
 }
 
 const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
@@ -569,7 +572,9 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
             {/* Feedback Form */}
             {progressPercentage >= 100 && (
               <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h3 className="text-xl font-bold mb-4">Share Your Experience</h3>
+                <h3 className="text-xl font-bold mb-4">
+                  Share Your Experience
+                </h3>
                 {feedbackState ? (
                   <div>
                     <div className="flex items-center gap-3 mb-3">

@@ -32,7 +32,13 @@ export async function GET() {
       );
     }
 
-    const { password: _password, emailVerificationToken: _emailToken, emailVerificationTokenExpiry: _expiry, _id: __id, ...userData } = user;
+    const {
+      password: _password,
+      emailVerificationToken: _emailToken,
+      emailVerificationTokenExpiry: _expiry,
+      _id: __id,
+      ...userData
+    } = user;
 
     return NextResponse.json({
       success: true,
@@ -92,7 +98,13 @@ export async function PUT(request: NextRequest) {
       .collection<UserDocument>("users")
       .findOne({ _id: userId });
 
-    const { password: _password, emailVerificationToken: _emailToken, emailVerificationTokenExpiry: _expiry, _id: __id, ...userData } = updatedUser!;
+    const {
+      password: _password,
+      emailVerificationToken: _emailToken,
+      emailVerificationTokenExpiry: _expiry,
+      _id: __id,
+      ...userData
+    } = updatedUser!;
 
     return NextResponse.json({
       success: true,

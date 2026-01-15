@@ -7,7 +7,14 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import ProfileMenu from "@/components/Layout/Header/ProfileMenu";
 
-const NAV_ITEMS = [
+// Define interface for type safety
+interface NavItem {
+  name: string;
+  path: string;
+  isAdmin?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { name: "Home", path: "/" },
   { name: "Courses", path: "/courses/" },
   // { name: "Our Team", path: "/front-pages/team/" },
@@ -21,6 +28,7 @@ const Navbar: React.FC = () => {
   const { data: session, status } = useSession();
   const [isMenuOpen, setMenuOpen] = useState(false);
   const handleToggle = () => setMenuOpen(!isMenuOpen);
+  const closeMenu = () => setMenuOpen(false); // Helper to close menu
 
   // handleScroll
   useEffect(() => {
@@ -39,12 +47,12 @@ const Navbar: React.FC = () => {
     return () => {
       document.removeEventListener("scroll", handleScroll);
     };
-  }, []); // Added empty dependency array to avoid repeated effect calls
+  }, []);
 
   return (
     <>
       <div
-        className="fixed top-0 right-0 left-0 transition-all h-28 z-[5] py-[20px]"
+        className="fixed top-0 right-0 left-0 transition-all h-28 z-[50] py-[20px]"
         id="navbar"
       >
         <div className="container 2xl:max-w-[1320px] mx-auto px-[12px]">
@@ -52,6 +60,7 @@ const Navbar: React.FC = () => {
             <Link
               href="/"
               className="inline-block max-w-[130px] ltr:mr-[15px] rtl:ml-[15px]"
+              onClick={closeMenu}
             >
               <Image
                 src="/images/logo-big.svg"
@@ -82,20 +91,27 @@ const Navbar: React.FC = () => {
             {/* For Big Devices */}
             <div className="hidden lg:flex items-center grow basis-full">
               <ul className="flex ltr:ml-[30px] rtl:mr-[30px] ltr:xl:ml-[55px] rtl:xl:mr-[55px] flex-row gap-[30px] xl:gap-[50px]">
-                {NAV_ITEMS.map((item) => (
-                  <li key={item.path}>
-                    <Link
-                      href={item.path}
-                      className={`font-medium transition-all hover:text-primary-600 text-[15px] xl:text-md dark:text-gray-400 ${
-                        pathname === item.path
-                          ? "text-primary-600 dark:text-primary-600"
-                          : ""
-                      }`}
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
+                {NAV_ITEMS.map((item) => {
+                  // BUG FIX 1: Check for Admin Logic
+                  // If the item is for admins only, and there is no session (or user is not admin), hide it.
+                  // Note: If your session has a role property, use: session?.user?.role !== 'admin'
+                  if (item.isAdmin && !session?.user) return null;
+
+                  return (
+                    <li key={item.path}>
+                      <Link
+                        href={item.path}
+                        className={`font-medium transition-all hover:text-primary-600 text-[15px] xl:text-md dark:text-gray-400 ${
+                          pathname === item.path
+                            ? "text-primary-600 dark:text-primary-600"
+                            : ""
+                        }`}
+                      >
+                        {item.name}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
 
               <div className="flex items-center ltr:ml-auto rtl:mr-auto gap-[15px]">
@@ -133,7 +149,7 @@ const Navbar: React.FC = () => {
               </div>
             </div>
 
-            {/* For Resposive */}
+            {/* For Responsive (Mobile) */}
             <div
               className={`bg-white dark:bg-black mt-[20px] p-[20px] md:p-[30px] w-full lg:hidden ${
                 isMenuOpen ? "block" : "hidden"
@@ -141,21 +157,28 @@ const Navbar: React.FC = () => {
               id="navbar-collapse"
             >
               <ul>
-                {NAV_ITEMS.map((item) => (
-                  <li
-                    key={item.path}
-                    className="my-[14px] md:my-[16px] first:mt-0 last:mb-0"
-                  >
-                    <Link
-                      href={item.path}
-                      className={`font-medium dark:text-primary-600 transition-all hover:text-primary-600 ${
-                        pathname === item.path ? "text-primary-600" : ""
-                      }`}
+                {NAV_ITEMS.map((item) => {
+                  // BUG FIX 1: Same check for Mobile Menu
+                  if (item.isAdmin && !session?.user) return null;
+
+                  return (
+                    <li
+                      key={item.path}
+                      className="my-[14px] md:my-[16px] first:mt-0 last:mb-0"
                     >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
+                      <Link
+                        href={item.path}
+                        // BUG FIX 2: Close menu on click
+                        onClick={closeMenu}
+                        className={`font-medium dark:text-primary-600 transition-all hover:text-primary-600 ${
+                          pathname === item.path ? "text-primary-600" : ""
+                        }`}
+                      >
+                        {item.name}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
 
               <div className="flex items-center gap-[15px] mt-[14px] md:mt-[16px]">
@@ -167,6 +190,7 @@ const Navbar: React.FC = () => {
                   <>
                     <Link
                       href="/authentication/sign-in"
+                      onClick={closeMenu}
                       className="inline-block text-purple-600 lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] rounded-md transition-all font-medium border border-purple-600 hover:text-white hover:bg-purple-500 hover:border-purple-500"
                     >
                       <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
@@ -179,6 +203,7 @@ const Navbar: React.FC = () => {
 
                     <Link
                       href="/authentication/sign-up"
+                      onClick={closeMenu}
                       className="inline-block lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] bg-purple-600 text-white rounded-md transition-all font-medium border border-purple-600 hover:bg-purple-500 hover:border-purple-500"
                     >
                       <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">

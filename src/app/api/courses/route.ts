@@ -55,8 +55,7 @@ export async function POST(request: NextRequest) {
         ? body.pricingType
         : "paid";
 
-    const price =
-      pricingType === "free" ? "$0" : body.price || "$0";
+    const price = pricingType === "free" ? "$0" : body.price || "$0";
 
     const newCourse: CourseDocument = {
       slug,

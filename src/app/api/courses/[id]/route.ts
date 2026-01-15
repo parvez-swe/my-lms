@@ -87,9 +87,7 @@ export async function PUT(
         : course.pricingType || "paid";
 
     const price =
-      pricingType === "free"
-        ? "$0"
-        : body.price ?? course.price ?? "$0";
+      pricingType === "free" ? "$0" : body.price ?? course.price ?? "$0";
 
     const updatedCourse: Partial<CourseDocument> = {
       ...body,

@@ -1,4 +1,3 @@
-import ContactUs from "@/components/FrontPage/ContactUs";
 import Cta from "@/components/FrontPage/Cta";
 import Faq from "@/components/FrontPage/Faq";
 import Features from "@/components/FrontPage/Features";
@@ -26,8 +25,6 @@ export default function Home() {
         <Instructors />
 
         <Faq />
-
-        <ContactUs />
 
         <Cta />
 

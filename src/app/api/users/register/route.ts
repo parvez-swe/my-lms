@@ -73,7 +73,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Remove sensitive data from response
-    const { password: _pwd, otp: _otpCode, otpExpiry: _otpExp, otpAttempts: _attempts, ...userData } = newUser;
+    const {
+      password: _pwd,
+      otp: _otpCode,
+      otpExpiry: _otpExp,
+      otpAttempts: _attempts,
+      ...userData
+    } = newUser;
 
     return NextResponse.json(
       {

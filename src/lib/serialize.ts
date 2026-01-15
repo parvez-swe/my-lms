@@ -4,6 +4,42 @@ import { Course } from "@/data/courses";
 import { EnrollmentDocument } from "@/models/Enrollment";
 
 /**
+ * Recursively converts ObjectId instances in a document (or array of documents) to their string representation.
+ * Handles nested objects and arrays.
+ * This is useful for preparing MongoDB documents for JSON serialization in API responses.
+ */
+export function serializeDocument<T>(doc: T): T {
+  if (!doc) {
+    return doc;
+  }
+
+  if (Array.isArray(doc)) {
+    return doc.map((item) => serializeDocument(item)) as T;
+  }
+
+  if (typeof doc === "object" && doc !== null) {
+    const newDoc: Record<string, unknown> = {};
+    for (const key in doc) {
+      if (Object.prototype.hasOwnProperty.call(doc, key)) {
+        const value = (doc as Record<string, unknown>)[key];
+        if (value instanceof ObjectId) {
+          newDoc[key] = value.toString();
+        } else if (value instanceof Date) {
+          newDoc[key] = value.toISOString(); // Convert Date objects to ISO string
+        } else if (typeof value === "object" && value !== null) {
+          newDoc[key] = serializeDocument(value);
+        } else {
+          newDoc[key] = value;
+        }
+      }
+    }
+    return newDoc as T;
+  }
+
+  return doc;
+}
+
+/**
  * Serialize CourseDocument to Course (removes MongoDB-specific fields)
  */
 export function serializeCourse(
@@ -20,9 +56,12 @@ export function serializeCourse(
  * Serialize EnrollmentDocument to plain object (converts ObjectIds to strings)
  * Date objects are kept as-is since they serialize correctly
  */
-export function serializeEnrollment(
-  enrollmentDoc: EnrollmentDocument | null
-): Omit<EnrollmentDocument, "_id" | "userId"> & { _id?: string; userId: string } | null {
+export function serializeEnrollment(enrollmentDoc: EnrollmentDocument | null):
+  | (Omit<EnrollmentDocument, "_id" | "userId"> & {
+      _id?: string;
+      userId: string;
+    })
+  | null {
   if (!enrollmentDoc) return null;
 
   return {
@@ -44,5 +83,9 @@ export function serializeEnrollment(
         }
       : undefined,
     feedback: enrollmentDoc.feedback,
-  } as Omit<EnrollmentDocument, "_id" | "userId"> & { _id?: string; userId: string };
+  } as Omit<EnrollmentDocument, "_id" | "userId"> & {
+    _id?: string;
+    userId: string;
+  };
 }
+
