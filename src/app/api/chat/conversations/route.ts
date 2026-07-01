@@ -6,8 +6,13 @@ export const dynamic = "force-dynamic";
 
 // GET /api/chat/conversations - Get ONE-ON-ONE conversations for current user ONLY
 export async function GET(request: NextRequest) {
+  /* auth-guarded */
   try {
-    const currentUser = getRequestParticipant(request);
+    const currentUser = await getRequestParticipant(request);
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const conversations = await listConversationsForUser(currentUser.id);
 
     return NextResponse.json({

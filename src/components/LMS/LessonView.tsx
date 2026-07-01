@@ -18,6 +18,7 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
+import QuizView from "@/components/LMS/QuizView";
 
 interface Reply {
   id: string;
@@ -54,6 +55,7 @@ interface LessonViewProps {
   nextLessonLink: string | null;
   slug: string;
   onToggleComplete?: (lessonId: string, completed: boolean) => void;
+  onQuizPassed?: () => void;
 }
 
 export default function LessonView({
@@ -66,6 +68,7 @@ export default function LessonView({
   nextLessonLink,
   slug,
   onToggleComplete,
+  onQuizPassed,
 }: LessonViewProps) {
   const { data: session } = useSession();
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -460,6 +463,17 @@ export default function LessonView({
             </div>
           )}
           {/* --- End of Downloadable Resources --- */}
+
+          {/* Quiz Section */}
+          {onQuizPassed && (
+            <QuizView
+              courseSlug={slug}
+              moduleIndex={moduleIndex}
+              lessonIndex={lessonIndex}
+              lessonId={lessonId}
+              onQuizPassed={onQuizPassed}
+            />
+          )}
 
           {/* Comments Section */}
           <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border">

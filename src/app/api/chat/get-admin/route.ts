@@ -8,23 +8,20 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// GET /api/chat/get-admin - Get the first admin user for visitor conversations
+// GET /api/chat/get-admin - Get admin for visitor live-support conversations (public)
 export async function GET() {
   try {
     const db = await getDatabase();
 
-    // Find the first admin or superadmin user
     const adminUser = await db.collection<UserDocument>("users").findOne(
       { role: { $in: ["admin", "superadmin"] } },
       {
         projection: { name: 1, email: 1, role: 1, image: 1 },
-        sort: { createdAt: 1 }, // Get the first admin created
+        sort: { createdAt: 1 },
       }
     );
 
     if (!adminUser) {
-      // If no admin exists, return a default admin ID
-      // This allows the system to work even without an admin user
       return NextResponse.json({
         id: "admin-1",
         name: "Admin Support",
@@ -43,7 +40,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching admin user:", error);
-    // Return default admin on error
     return NextResponse.json({
       id: "admin-1",
       name: "Admin Support",

@@ -1,9 +1,12 @@
 "use client";
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { formatTimeAgo } from "@/lib/timeAgo";
+import { formatPrice, resolveCoursePrice } from "@/lib/currency";
+import { NotificationType } from "@/models/Notification";
 
 type Tab = "profile" | "account" | "notifications" | "billing";
 
@@ -113,10 +116,10 @@ const SidebarButton = ({
   <button
     type="button"
     onClick={onClick}
-    className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left font-semibold transition-colors ${
+    className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
       isActive
-        ? "bg-purple-100 text-purple-700"
-        : "text-gray-600 hover:bg-gray-100"
+        ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
+        : "text-slate-600 hover:bg-slate-100"
     }`}
   >
     {icon}
@@ -130,6 +133,13 @@ interface EditProfileTabProps {
     name: string;
     email: string;
     image?: string;
+    role?: string;
+    phone?: string;
+    currentJob?: string;
+    careerGoal?: string;
+    bio?: string;
+    headline?: string;
+    address?: { division: string; district: string };
   };
   onUpdate: () => void;
 }
@@ -140,6 +150,13 @@ const EditProfileTab: React.FC<EditProfileTabProps> = ({
 }) => {
   const [name, setName] = useState(userProfile.name);
   const [image, setImage] = useState(userProfile.image || "");
+  const [phone, setPhone] = useState(userProfile.phone || "");
+  const [currentJob, setCurrentJob] = useState(userProfile.currentJob || "");
+  const [careerGoal, setCareerGoal] = useState(userProfile.careerGoal || "");
+  const [bio, setBio] = useState(userProfile.bio || "");
+  const [headline, setHeadline] = useState(userProfile.headline || "");
+  const [division, setDivision] = useState(userProfile.address?.division || "");
+  const [district, setDistrict] = useState(userProfile.address?.district || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -147,6 +164,13 @@ const EditProfileTab: React.FC<EditProfileTabProps> = ({
   useEffect(() => {
     setName(userProfile.name);
     setImage(userProfile.image || "");
+    setPhone(userProfile.phone || "");
+    setCurrentJob(userProfile.currentJob || "");
+    setCareerGoal(userProfile.careerGoal || "");
+    setBio(userProfile.bio || "");
+    setHeadline(userProfile.headline || "");
+    setDivision(userProfile.address?.division || "");
+    setDistrict(userProfile.address?.district || "");
   }, [userProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,10 +182,18 @@ const EditProfileTab: React.FC<EditProfileTabProps> = ({
     try {
       const response = await fetch("/api/users/profile", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, image: image || undefined }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          image: image || undefined,
+          phone,
+          currentJob,
+          careerGoal: careerGoal || undefined,
+          bio,
+          headline,
+          address:
+            division && district ? { division, district } : undefined,
+        }),
       });
 
       const result = await response.json();
@@ -227,6 +259,100 @@ const EditProfileTab: React.FC<EditProfileTabProps> = ({
               className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
             />
           </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Phone
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-[#15203b] dark:text-white"
+              placeholder="01XXXXXXXXX"
+            />
+          </div>
+          <div>
+            <label htmlFor="currentJob" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Current Job
+            </label>
+            <input
+              type="text"
+              id="currentJob"
+              value={currentJob}
+              onChange={(e) => setCurrentJob(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-[#15203b] dark:text-white"
+            />
+          </div>
+          <div>
+            <label htmlFor="careerGoal" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Career Goal
+            </label>
+            <select
+              id="careerGoal"
+              value={careerGoal}
+              onChange={(e) => setCareerGoal(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-[#15203b] dark:text-white"
+            >
+              <option value="">Select goal</option>
+              <option value="freelance">Freelance</option>
+              <option value="abroad">Work Abroad</option>
+              <option value="job">Local Job</option>
+              <option value="remote-job">Remote Job</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="headline" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Headline
+            </label>
+            <input
+              type="text"
+              id="headline"
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-[#15203b] dark:text-white"
+              placeholder="e.g. Aspiring web developer"
+            />
+          </div>
+          <div>
+            <label htmlFor="division" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Division
+            </label>
+            <input
+              type="text"
+              id="division"
+              value={division}
+              onChange={(e) => setDivision(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-[#15203b] dark:text-white"
+            />
+          </div>
+          <div>
+            <label htmlFor="district" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              District
+            </label>
+            <input
+              type="text"
+              id="district"
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-[#15203b] dark:text-white"
+            />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="bio" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Bio
+          </label>
+          <textarea
+            id="bio"
+            rows={3}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-[#15203b] dark:text-white"
+            placeholder="Tell us about yourself..."
+          />
         </div>
         <div>
           <label
@@ -432,32 +558,330 @@ const AccountSettingsTab: React.FC<AccountSettingsTabProps> = () => {
 };
 
 // Placeholder for other tabs
-const ComingSoonTab = ({ title }: { title: string }) => (
-  <div className="text-center py-16">
-    <h2 className="text-3xl font-bold mb-4 text-gray-800">{title}</h2>
-    <p className="text-gray-600 text-lg">
-      This feature is under construction. Check back later!
-    </p>
-  </div>
-);
+const TYPE_ICONS: Record<NotificationType, { icon: string; color: string }> = {
+  enrollment_approved: { icon: "check_circle", color: "text-green-600" },
+  enrollment_rejected: { icon: "cancel", color: "text-red-500" },
+  course_update: { icon: "school", color: "text-purple-600" },
+  new_message: { icon: "mail", color: "text-blue-500" },
+};
+
+interface NotificationItem {
+  _id: string;
+  type: NotificationType;
+  message: string;
+  link: string;
+  read: boolean;
+  createdAt: string;
+}
+
+const NotificationsTab = () => {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [markingAll, setMarkingAll] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      const result = await res.json();
+      if (result.success) {
+        setNotifications(result.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const markAsRead = async (id: string) => {
+    await fetch(`/api/notifications/${id}/read`, { method: "PUT" });
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+    );
+  };
+
+  const markAllRead = async () => {
+    setMarkingAll(true);
+    try {
+      await fetch("/api/notifications/read-all", { method: "PUT" });
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Notifications</h2>
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={markAllRead}
+            disabled={markingAll}
+            className="text-sm font-semibold text-purple-600 hover:text-purple-700 disabled:opacity-50"
+          >
+            {markingAll ? "Marking..." : "Mark all read"}
+          </button>
+        )}
+      </div>
+
+      {notifications.length === 0 ? (
+        <p className="text-gray-500 text-center py-12">
+          No notifications yet. You&apos;ll be notified when your enrollments are
+          reviewed or courses are updated.
+        </p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {notifications.map((notification) => {
+            const meta = TYPE_ICONS[notification.type];
+            return (
+              <li
+                key={notification._id}
+                className={`py-4 flex gap-4 ${!notification.read ? "bg-purple-50/50 -mx-2 px-2 rounded-lg" : ""}`}
+              >
+                <div
+                  className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 ${meta.color}`}
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    {meta.icon}
+                  </span>
+                </div>
+                <div className="flex-grow min-w-0">
+                  <p
+                    className={`text-sm ${!notification.read ? "font-semibold text-gray-900" : "text-gray-700"}`}
+                  >
+                    {notification.message}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formatTimeAgo(notification.createdAt)}
+                  </p>
+                  <Link
+                    href={notification.link}
+                    onClick={() => {
+                      if (!notification.read) markAsRead(notification._id);
+                    }}
+                    className="text-xs text-purple-600 hover:underline mt-1 inline-block"
+                  >
+                    View details →
+                  </Link>
+                </div>
+                {!notification.read && (
+                  <span className="flex-shrink-0 w-2 h-2 rounded-full bg-purple-500 mt-2" />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+interface EnrollmentWithCourse {
+  _id: string;
+  status: string;
+  enrolledAt?: string;
+  updatedAt?: string;
+  payment?: {
+    method: string;
+    transactionId: string;
+    amount?: number;
+    currency?: string;
+    paidAt?: string;
+  };
+  course?: {
+    title: string;
+    price?: string;
+    priceAmount?: number;
+    currency?: string;
+    pricingType?: string;
+  } | null;
+}
+
+const BillingTab = () => {
+  const [enrollments, setEnrollments] = useState<EnrollmentWithCourse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      try {
+        const res = await fetch("/api/enrollments");
+        const result = await res.json();
+        if (result.success) {
+          setEnrollments(
+            (result.data || []).filter(
+              (e: EnrollmentWithCourse) => e.status === "approved"
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch enrollments:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEnrollments();
+  }, []);
+
+  const formatDate = (date?: string) => {
+    if (!date) return "—";
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatAmount = (enrollment: EnrollmentWithCourse) => {
+    const amount = enrollment.payment?.amount;
+    const currency = enrollment.payment?.currency;
+    if (amount != null) {
+      return formatPrice(amount, currency);
+    }
+    if (enrollment.course) {
+      return resolveCoursePrice(enrollment.course).label;
+    }
+    return "—";
+  };
+
+  const formatPaymentMethod = (method?: string) => {
+    const labels: Record<string, string> = {
+      bkash: "bKash",
+      nagad: "Nagad",
+      sslcommerz: "SSLCommerz",
+      stripe: "Stripe",
+      card: "Card",
+      bank: "Bank Transfer",
+    };
+    return method ? labels[method] || method : "—";
+  };
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+        Billing & Payments
+      </h2>
+
+      <div className="mb-8 p-5 bg-gray-50 rounded-lg border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+          Current Payment Method
+        </h3>
+        <p className="font-medium text-gray-700">
+          bKash, Nagad, SSLCommerz, or Stripe
+        </p>
+        <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+          When you enroll in a paid course, choose your preferred payment
+          method. Manual bKash/Nagad payments are reviewed by an admin. SSL
+          Commerz and Stripe payments are processed automatically.
+        </p>
+      </div>
+
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        Payment History
+      </h3>
+
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto" />
+        </div>
+      ) : enrollments.length === 0 ? (
+        <p className="text-gray-500 text-center py-8">
+          No approved payments yet. Once an enrollment is approved, it will
+          appear here.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-gray-500">
+                <th className="pb-3 pr-4 font-medium">Course</th>
+                <th className="pb-3 pr-4 font-medium">Amount</th>
+                <th className="pb-3 pr-4 font-medium">Method</th>
+                <th className="pb-3 pr-4 font-medium">Transaction ID</th>
+                <th className="pb-3 font-medium">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {enrollments.map((enrollment) => (
+                <tr key={enrollment._id} className="text-gray-700">
+                  <td className="py-3 pr-4 font-medium">
+                    {enrollment.course?.title ?? "Unknown course"}
+                  </td>
+                  <td className="py-3 pr-4">{formatAmount(enrollment)}</td>
+                  <td className="py-3 pr-4">
+                    {formatPaymentMethod(enrollment.payment?.method)}
+                  </td>
+                  <td className="py-3 pr-4 font-mono text-xs">
+                    {enrollment.payment?.transactionId ?? "—"}
+                  </td>
+                  <td className="py-3">
+                    {formatDate(
+                      enrollment.payment?.paidAt ??
+                        enrollment.updatedAt ??
+                        enrollment.enrolledAt
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // --- Main App Component ---
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [userProfile, setUserProfile] = useState<{
     name: string;
     email: string;
     image?: string;
     role?: string;
+    phone?: string;
+    currentJob?: string;
+    careerGoal?: string;
+    bio?: string;
+    headline?: string;
+    address?: { division: string; district: string };
     createdAt?: Date;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (
+      tab === "profile" ||
+      tab === "account" ||
+      tab === "notifications" ||
+      tab === "billing"
+    ) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/authentication/sign-in?callbackUrl=/profile");
+      router.push("/auth/signin?callbackUrl=/profile");
       return;
     }
 
@@ -490,10 +914,10 @@ export default function ProfilePage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#0c1427]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading profile...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+          <p className="text-slate-600">Loading profile...</p>
         </div>
       </div>
     );
@@ -512,9 +936,9 @@ export default function ProfilePage() {
       case "account":
         return <AccountSettingsTab />;
       case "notifications":
-        return <ComingSoonTab title="Notifications" />;
+        return <NotificationsTab />;
       case "billing":
-        return <ComingSoonTab title="Billing & Subscriptions" />;
+        return <BillingTab />;
       default:
         return (
           <EditProfileTab userProfile={userProfile} onUpdate={fetchProfile} />
@@ -532,46 +956,44 @@ export default function ProfilePage() {
     : "Recently";
 
   return (
-    <div className="bg-gray-50 min-h-screen font-sans pt-20">
-      {/* Profile Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0c1427] font-sans">
+      <header className="border-b border-slate-200/80 dark:border-gray-700 bg-white dark:bg-[#15203b]">
+        <div className="container mx-auto max-w-6xl px-4 py-8">
+          <div className="flex flex-col items-center gap-6 md:flex-row">
             <Image
               src={userImage}
               alt={`${userProfile.name}'s profile picture`}
-              width={120}
-              height={120}
-              className="rounded-full border-4 border-white shadow-lg"
+              width={96}
+              height={96}
+              className="rounded-2xl border-4 border-white shadow-xl ring-2 ring-violet-100"
             />
-            <div className="text-center md:text-left flex-grow">
-              <h1 className="text-3xl font-bold text-gray-900">
+            <div className="flex-grow text-center md:text-left">
+              <p className="text-sm font-semibold uppercase tracking-wider text-violet-600">
+                My Account
+              </p>
+              <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">
                 {userProfile.name}
               </h1>
-              <p className="text-gray-600">{userProfile.email}</p>
-              <p className="text-sm text-gray-500 mt-1 capitalize">
-                {userProfile.role || "Student"} • Member since {memberSince}
+              <p className="text-slate-600 dark:text-gray-400">{userProfile.email}</p>
+              <p className="mt-1 text-sm capitalize text-slate-500 dark:text-gray-500">
+                {userProfile.role || "Student"} · Member since {memberSince}
               </p>
             </div>
-            <div className="md:ml-auto">
-              <Link
-                href="/mycourses"
-                className="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-              >
-                My Courses
-              </Link>
-            </div>
+            <Link
+              href="/mycourses"
+              className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:from-violet-500 hover:to-indigo-500"
+            >
+              My Courses
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Navigation */}
+      <main className="container mx-auto max-w-6xl px-4 py-10">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
           <aside className="lg:col-span-1">
-            <div className="bg-white p-4 rounded-lg shadow-lg">
-              <nav className="space-y-2">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-gray-700 bg-white dark:bg-[#15203b] p-3 shadow-sm">
+              <nav className="space-y-1">
                 <SidebarButton
                   icon={<UserIcon />}
                   label="Edit Profile"
@@ -596,7 +1018,7 @@ export default function ProfilePage() {
                   isActive={activeTab === "billing"}
                   onClick={() => setActiveTab("billing")}
                 />
-                <div className="border-t my-2 border-gray-200"></div>
+                <div className="my-2 border-t border-slate-100" />
                 <SidebarButton
                   icon={<LogOutIcon />}
                   label="Logout"
@@ -608,12 +1030,29 @@ export default function ProfilePage() {
 
           {/* Content Area */}
           <div className="lg:col-span-3">
-            <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-gray-700 bg-white dark:bg-[#15203b] p-6 shadow-sm sm:p-8">
               {renderContent()}
             </div>
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#0c1427]">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+            <p className="text-slate-600">Loading profile...</p>
+          </div>
+        </div>
+      }
+    >
+      <ProfilePageContent />
+    </Suspense>
   );
 }

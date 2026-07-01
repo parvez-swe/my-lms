@@ -1,0 +1,31 @@
+export const bangladeshDivisions: Record<string, string[]> = {
+  Dhaka: [
+    "Dhaka",
+    "Gazipur",
+    "Narayanganj",
+    "Tangail",
+    "Sherpur",
+    "Jashore",
+    "Kishoreganj",
+  ],
+  Chattogram: [
+    "Chattogram",
+    "Comilla",
+    "Cox's Bazar",
+    "Feni",
+    "Khagrachhari",
+    "Rangamati",
+    "Bandarban",
+  ],
+  Sylhet: ["Sylhet", "Moulvibazar", "Sunamganj", "Habiganj"],
+  Khulna: ["Khulna", "Barisal", "Patuakhali", "Pirojpur", "Jhalokati", "Bhola"],
+  Rajshahi: ["Rajshahi", "Bogra", "Natore", "Naogaon", "Pabna", "Sirajganj"],
+  Rangpur: [
+    "Rangpur",
+    "Dinajpur",
+    "Kurigram",
+    "Lalmonirhat",
+    "Nilphamari",
+    "Thakurgaon",
+  ],
+};

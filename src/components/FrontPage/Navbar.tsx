@@ -6,6 +6,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import ProfileMenu from "@/components/Layout/Header/ProfileMenu";
+import NotificationBell from "@/components/Notifications/NotificationBell";
+import ThemeToggle from "@/components/ui/ThemeToggle";
+import { BRAND } from "@/lib/brand";
 
 // Define interface for type safety
 interface NavItem {
@@ -20,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   // { name: "Our Team", path: "/front-pages/team/" },
   { name: "FAQ's", path: "/front-pages/faq/" },
   { name: "Contact", path: "/front-pages/contact/" },
-  { name: "Admin", path: "/dashboard/ecommerce/", isAdmin: true },
+  { name: "Admin", path: "/dashboard/", isAdmin: true },
 ];
 
 const Navbar: React.FC = () => {
@@ -52,29 +55,23 @@ const Navbar: React.FC = () => {
   return (
     <>
       <div
-        className="fixed top-0 right-0 left-0 transition-all h-28 z-[50] py-[20px]"
+        className="fixed top-0 right-0 left-0 z-[50] min-h-28 border-b border-gray-200/60 bg-white/95 py-5 backdrop-blur-md transition-all dark:border-gray-800/60 dark:bg-[#0c1427]/95"
         id="navbar"
       >
         <div className="container 2xl:max-w-[1320px] mx-auto px-[12px]">
           <div className="flex items-center relative flex-wrap lg:flex-nowrap justify-between lg:justify-start">
             <Link
               href="/"
-              className="inline-block max-w-[130px] ltr:mr-[15px] rtl:ml-[15px]"
+              className="inline-block max-w-[160px] ltr:mr-[15px] rtl:ml-[15px]"
               onClick={closeMenu}
             >
               <Image
-                src="/images/logo-big.svg"
-                alt="logo"
-                className="inline-block dark:hidden"
-                width={126}
+                src={BRAND.logo}
+                alt={BRAND.name}
+                className="inline-block h-9 w-auto"
+                width={140}
                 height={36}
-              />
-              <Image
-                src="/images/white-logo-big.svg"
-                alt="logo"
-                className="hidden dark:inline-block"
-                width={126}
-                height={36}
+                priority
               />
             </Link>
 
@@ -115,14 +112,18 @@ const Navbar: React.FC = () => {
               </ul>
 
               <div className="flex items-center ltr:ml-auto rtl:mr-auto gap-[15px]">
+                <ThemeToggle />
                 {status === "loading" ? (
                   <div className="w-[35px] h-[35px] rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
                 ) : session?.user ? (
-                  <ProfileMenu />
+                  <>
+                    <NotificationBell viewAllHref="/profile?tab=notifications" />
+                    <ProfileMenu />
+                  </>
                 ) : (
                   <>
                     <Link
-                      href="/authentication/sign-in"
+                      href="/auth/signin"
                       className="inline-block text-purple-600 lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] rounded-md transition-all font-medium border border-purple-600 hover:text-white hover:bg-purple-500 hover:border-purple-500"
                     >
                       <span className="inline-block relative ltr:pl-[25px] rtl:pr-[25px] ltr:md:pl-[29px] rtl:md:pr-[29px]">
@@ -182,14 +183,18 @@ const Navbar: React.FC = () => {
               </ul>
 
               <div className="flex items-center gap-[15px] mt-[14px] md:mt-[16px]">
+                <ThemeToggle />
                 {status === "loading" ? (
                   <div className="w-[35px] h-[35px] rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
                 ) : session?.user ? (
-                  <ProfileMenu />
+                  <>
+                    <NotificationBell viewAllHref="/profile?tab=notifications" />
+                    <ProfileMenu />
+                  </>
                 ) : (
                   <>
                     <Link
-                      href="/authentication/sign-in"
+                      href="/auth/signin"
                       onClick={closeMenu}
                       className="inline-block text-purple-600 lg:text-[15px] xl:text-[16px] py-[11px] px-[17px] rounded-md transition-all font-medium border border-purple-600 hover:text-white hover:bg-purple-500 hover:border-purple-500"
                     >

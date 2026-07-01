@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { EnrollmentDocument } from "@/models/Enrollment";
+import { CourseDocument } from "@/models/Course";
 import { ObjectId } from "mongodb";
 
 // Force dynamic rendering
@@ -63,6 +64,15 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const course = await db
+      .collection<CourseDocument>("courses")
+      .findOne({ slug: courseSlug });
+
+    const totalLessons =
+      course?.modules.reduce((acc, mod) => acc + mod.lessons.length, 0) ?? 0;
+    const isCourseComplete =
+      totalLessons > 0 && updatedCompletedLessons.length >= totalLessons;
+
     await db.collection("enrollments").updateOne(
       {
         userId: userId,
@@ -73,6 +83,7 @@ export async function PUT(request: NextRequest) {
           "progress.completedLessons": updatedCompletedLessons,
           "progress.lastAccessed": new Date(),
           updatedAt: new Date(),
+          ...(isCourseComplete ? { completedAt: new Date() } : {}),
         },
       }
     );

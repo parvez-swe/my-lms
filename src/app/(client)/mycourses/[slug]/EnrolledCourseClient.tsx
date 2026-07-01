@@ -70,6 +70,9 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isDownloadingCertificate, setIsDownloadingCertificate] =
     useState(false);
+  const [certificateDownloadError, setCertificateDownloadError] = useState<
+    string | null
+  >(null);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [messageSuccess, setMessageSuccess] = useState(false);
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
@@ -163,9 +166,15 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
     setMessageSuccess(false);
 
     try {
-      // Get instructor email - for now, we'll use a placeholder
-      // In a real app, you'd fetch this from the course or user data
-      const instructorEmail = "instructor@example.com"; // This should come from course data
+      // Get instructor email from course data
+      const instructorEmail = course.instructorEmail;
+      if (!instructorEmail) {
+        setMessageError(
+          "Instructor contact email is not available for this course."
+        );
+        setIsSendingMessage(false);
+        return;
+      }
 
       const response = await fetch("/api/messages/instructor", {
         method: "POST",
@@ -198,30 +207,37 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
     }
   };
 
-  const handleDownloadCertificate = async (format: "pdf" | "png" = "pdf") => {
+  const handleDownloadCertificate = async () => {
     if (isDownloadingCertificate || progressPercentage < 100) return;
 
     setIsDownloadingCertificate(true);
+    setCertificateDownloadError(null);
     try {
       const response = await fetch(
-        `/api/certificates/${course.slug}/download?format=${format}`
+        `/api/certificates/${course.slug}/download`
       );
-      const result = await response.json();
 
-      if (result.success) {
-        // Create download link
-        const link = document.createElement("a");
-        link.href = result.data.downloadUrl;
-        link.download = `certificate-${course.slug}.${format}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        alert(result.error || "Failed to generate certificate");
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || "Failed to generate certificate");
       }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `certificate-${course.slug}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Failed to download certificate:", error);
-      alert("Failed to download certificate. Please try again.");
+      setCertificateDownloadError(
+        error instanceof Error
+          ? error.message
+          : "Failed to download certificate. Please try again."
+      );
     } finally {
       setIsDownloadingCertificate(false);
     }
@@ -279,7 +295,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 dark:bg-[#0c1427] min-h-screen">
       {/* Progress Banner */}
       <ProgressBanner
         courseTitle={course.title}
@@ -295,7 +311,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
           {/* Left Column - Course Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Course Curriculum with Progress */}
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 p-6 rounded-lg shadow-sm">
               <h2 className="text-2xl font-bold mb-6 flex items-center">
                 <BookOpen className="mr-2 text-purple-600" size={24} />
                 Course Curriculum
@@ -424,7 +440,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
 
             {/* Student Feedback */}
             {course.testimonials && course.testimonials.length > 0 && (
-              <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 p-6 rounded-lg shadow-sm">
                 <h2 className="text-2xl font-bold mb-6">Student Reviews</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {course.testimonials.map((testimonial, index) => (
@@ -467,7 +483,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
             />
 
             {/* Course Rating */}
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 p-6 rounded-lg shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">Course Rating</h3>
                 <span className="text-sm text-gray-500">
@@ -496,7 +512,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
             </div>
 
             {/* Instructor Card */}
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold mb-4">Your Instructor</h3>
               <div className="flex items-center mb-4">
                 <Image
@@ -540,7 +556,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
             </div>
 
             {/* Course Stats */}
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 p-6 rounded-lg shadow-sm">
               <h3 className="text-xl font-bold mb-4">Course Stats</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -571,7 +587,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
 
             {/* Feedback Form */}
             {progressPercentage >= 100 && (
-              <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 p-6 rounded-lg shadow-sm">
                 <h3 className="text-xl font-bold mb-4">
                   Share Your Experience
                 </h3>
@@ -678,6 +694,11 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
                   <p className="text-gray-600 text-sm mb-4">
                     Congratulations on completing the course!
                   </p>
+                  {certificateDownloadError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                      {certificateDownloadError}
+                    </div>
+                  )}
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={handlePreviewCertificate}
@@ -686,36 +707,32 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
                       <Eye size={18} />
                       <span>Preview Certificate</span>
                     </button>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleDownloadCertificate("pdf")}
-                        disabled={isDownloadingCertificate}
-                        className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                      >
-                        {isDownloadingCertificate ? (
+                    <a
+                      href={`/api/certificates/${course.slug}/download`}
+                      download={`certificate-${course.slug}.pdf`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDownloadCertificate();
+                      }}
+                      className={`w-full bg-yellow-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2 ${
+                        isDownloadingCertificate
+                          ? "opacity-50 pointer-events-none"
+                          : ""
+                      }`}
+                      aria-disabled={isDownloadingCertificate}
+                    >
+                      {isDownloadingCertificate ? (
+                        <>
                           <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <>
-                            <FileDown size={16} />
-                            <span>PDF</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleDownloadCertificate("png")}
-                        disabled={isDownloadingCertificate}
-                        className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                      >
-                        {isDownloadingCertificate ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <>
-                            <FileDown size={16} />
-                            <span>PNG</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                          <span>Generating PDF...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileDown size={16} />
+                          <span>Download PDF</span>
+                        </>
+                      )}
+                    </a>
                   </div>
                 </div>
               </div>
@@ -727,7 +744,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
       {/* Message Instructor Modal */}
       {showMessageModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-2xl font-bold text-gray-900">
@@ -820,7 +837,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
       {/* Certificate Preview Modal */}
       {showCertificateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-2xl font-bold text-gray-900">
@@ -903,13 +920,25 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => {
-                    handleDownloadCertificate("pdf");
+                {certificateDownloadError && (
+                  <p className="flex-1 self-center text-sm text-red-600 mr-auto">
+                    {certificateDownloadError}
+                  </p>
+                )}
+                <a
+                  href={`/api/certificates/${course.slug}/download`}
+                  download={`certificate-${course.slug}.pdf`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDownloadCertificate();
                     setShowCertificateModal(false);
                   }}
-                  disabled={isDownloadingCertificate}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className={`px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center space-x-2 ${
+                    isDownloadingCertificate
+                      ? "opacity-50 pointer-events-none"
+                      : ""
+                  }`}
+                  aria-disabled={isDownloadingCertificate}
                 >
                   {isDownloadingCertificate ? (
                     <>
@@ -922,27 +951,7 @@ const EnrolledCourseClient: React.FC<EnrolledCourseClientProps> = ({
                       <span>Download PDF</span>
                     </>
                   )}
-                </button>
-                <button
-                  onClick={() => {
-                    handleDownloadCertificate("png");
-                    setShowCertificateModal(false);
-                  }}
-                  disabled={isDownloadingCertificate}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
-                  {isDownloadingCertificate ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Generating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FileDown size={16} />
-                      <span>Download PNG</span>
-                    </>
-                  )}
-                </button>
+                </a>
               </div>
             </div>
           </div>

@@ -6,7 +6,17 @@ import Link from "next/link";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { Course } from "@/data/courses";
 
-const CoursesListTable: React.FC = () => {
+interface CoursesListTableProps {
+  scope?: "all" | "mine";
+  basePath?: string;
+  showDelete?: boolean;
+}
+
+const CoursesListTable: React.FC<CoursesListTableProps> = ({
+  scope = "all",
+  basePath = "/dashboard/courses",
+  showDelete = true,
+}) => {
   const [selectedOption, setSelectedOption] = useState<string>("All Courses");
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +28,9 @@ const CoursesListTable: React.FC = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await fetch("/api/courses");
+        const response = await fetch(
+          scope === "mine" ? "/api/courses?mine=true" : "/api/courses"
+        );
         const result = await response.json();
         if (result.success) {
           setCourses(result.data);
@@ -31,7 +43,7 @@ const CoursesListTable: React.FC = () => {
     };
 
     fetchCourses();
-  }, []);
+  }, [scope]);
 
   const handleSelect = (option: string) => {
     setSelectedOption(option);
@@ -167,6 +179,9 @@ const CoursesListTable: React.FC = () => {
                     End Date
                   </th>
                   <th className="font-medium ltr:text-left rtl:text-right px-[20px] py-[11px] md:ltr:first:pl-[25px] md:rtl:first:pr-[25px] ltr:first:pr-0 rtl:first:pl-0 bg-primary-50 dark:bg-[#15203c] whitespace-nowrap">
+                    Status
+                  </th>
+                  <th className="font-medium ltr:text-left rtl:text-right px-[20px] py-[11px] md:ltr:first:pl-[25px] md:rtl:first:pr-[25px] ltr:first:pr-0 rtl:first:pl-0 bg-primary-50 dark:bg-[#15203c] whitespace-nowrap">
                     Price
                   </th>
                   <th className="font-medium ltr:text-left rtl:text-right px-[20px] py-[11px] md:ltr:first:pl-[25px] md:rtl:first:pr-[25px] ltr:first:pr-0 rtl:first:pl-0 bg-primary-50 dark:bg-[#15203c] whitespace-nowrap">
@@ -179,7 +194,7 @@ const CoursesListTable: React.FC = () => {
                 {coursesToDisplay.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="ltr:text-left rtl:text-right px-[20px] py-[15px] md:ltr:first:pl-[25px] md:rtl:first:pr-[25px] text-center"
                     >
                       <span className="text-gray-500 dark:text-gray-400">
@@ -198,7 +213,7 @@ const CoursesListTable: React.FC = () => {
 
                       <td className="ltr:text-left rtl:text-right whitespace-nowrap px-[20px] py-[15px] md:ltr:first:pl-[25px] md:rtl:first:pr-[25px] ltr:first:pr-0 rtl:first:pl-0 border-b border-gray-100 dark:border-[#172036]">
                         <Link
-                          href={`/dashboard/courses/details/${course.slug}`}
+                          href={`${basePath}/details/${course.slug}/`}
                           className="inline-block font-medium transition-all text-gray-500 dark:text-gray-400 hover:text-primary-500"
                         >
                           {course.title}
@@ -247,6 +262,22 @@ const CoursesListTable: React.FC = () => {
                       </td>
 
                       <td className="ltr:text-left rtl:text-right whitespace-nowrap px-[20px] py-[15px] md:ltr:first:pl-[25px] md:rtl:first:pr-[25px] ltr:first:pr-0 rtl:first:pl-0 border-b border-gray-100 dark:border-[#172036]">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                            (course.status || "published") === "published"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : (course.status || "") === "pending_approval"
+                                ? "bg-amber-100 text-amber-700"
+                                : (course.status || "") === "rejected"
+                                  ? "bg-rose-100 text-rose-700"
+                                  : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {(course.status || "published").replace("_", " ")}
+                        </span>
+                      </td>
+
+                      <td className="ltr:text-left rtl:text-right whitespace-nowrap px-[20px] py-[15px] md:ltr:first:pl-[25px] md:rtl:first:pr-[25px] ltr:first:pr-0 rtl:first:pl-0 border-b border-gray-100 dark:border-[#172036]">
                         <span className="text-gray-500 dark:text-gray-400">
                           {course.price}
                         </span>
@@ -256,7 +287,7 @@ const CoursesListTable: React.FC = () => {
                         <div className="flex items-center gap-[9px]">
                           <div className="relative group">
                             <Link
-                              href={`/dashboard/courses/details/${course.slug}`}
+                              href={`${basePath}/details/${course.slug}/`}
                               className="text-primary-500 leading-none"
                             >
                               <i className="material-symbols-outlined !text-md">
@@ -274,7 +305,7 @@ const CoursesListTable: React.FC = () => {
 
                           <div className="relative group">
                             <Link
-                              href={`/dashboard/courses/update/${course.slug}`}
+                              href={`${basePath}/update/${course.slug}/`}
                               className="text-gray-500 leading-none"
                             >
                               <i className="material-symbols-outlined !text-md">
@@ -290,6 +321,7 @@ const CoursesListTable: React.FC = () => {
                             </div>
                           </div>
 
+                          {showDelete && (
                           <div className="relative group">
                             <button
                               type="button"
@@ -301,13 +333,12 @@ const CoursesListTable: React.FC = () => {
                               </i>
                             </button>
 
-                            {/* Tooltip */}
                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                               Delete
-                              {/* Arrow */}
                               <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-white dark:border-[#172036] border-t-gray-800 dark:border-t-gray-800"></div>
                             </div>
                           </div>
+                          )}
                         </div>
                       </td>
                     </tr>

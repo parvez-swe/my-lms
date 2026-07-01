@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
-import { UserDocument } from "@/models/User";
+import { UserDocument, CareerGoal, UserSocialLink } from "@/models/User";
 import { ObjectId } from "mongodb";
 
 export const dynamic = "force-dynamic";
+
+const CAREER_GOALS: CareerGoal[] = [
+  "freelance",
+  "abroad",
+  "job",
+  "remote-job",
+];
 
 // GET - Get user profile
 export async function GET() {
@@ -53,7 +60,7 @@ export async function GET() {
   }
 }
 
-// PUT - Update user profile
+// PUT - Update user profile (all non-sensitive fields)
 export async function PUT(request: NextRequest) {
   try {
     const session = await auth();
@@ -66,9 +73,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, image } = body;
+    const {
+      name,
+      image,
+      phone,
+      currentJob,
+      careerGoal,
+      bio,
+      headline,
+      address,
+      socialLinks,
+    } = body;
 
-    if (!name) {
+    if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
         { success: false, error: "Name is required" },
         { status: 400 }
@@ -79,20 +96,56 @@ export async function PUT(request: NextRequest) {
     const userId = new ObjectId(session.user.id);
 
     const updateData: Partial<UserDocument> = {
-      name,
+      name: name.trim(),
       updatedAt: new Date(),
     };
 
-    if (image) {
-      updateData.image = image;
+    if (image !== undefined) updateData.image = image || undefined;
+    if (phone !== undefined) updateData.phone = phone?.trim() || undefined;
+    if (currentJob !== undefined)
+      updateData.currentJob = currentJob?.trim() || undefined;
+    if (bio !== undefined) updateData.bio = bio?.trim() || undefined;
+    if (headline !== undefined)
+      updateData.headline = headline?.trim() || undefined;
+
+    if (careerGoal !== undefined) {
+      if (careerGoal === "" || careerGoal === null) {
+        updateData.careerGoal = undefined;
+      } else if (CAREER_GOALS.includes(careerGoal as CareerGoal)) {
+        updateData.careerGoal = careerGoal as CareerGoal;
+      }
     }
 
-    await db.collection("users").updateOne(
-      { _id: userId },
-      {
-        $set: updateData,
+    if (address !== undefined) {
+      if (address?.division && address?.district) {
+        updateData.address = {
+          division: String(address.division).trim(),
+          district: String(address.district).trim(),
+        };
+      } else {
+        updateData.address = undefined;
       }
-    );
+    }
+
+    if (Array.isArray(socialLinks)) {
+      const allowedPlatforms = new Set([
+        "linkedin",
+        "twitter",
+        "github",
+        "website",
+      ]);
+      updateData.socialLinks = socialLinks
+        .filter((l: { url?: string }) => l?.url?.trim())
+        .slice(0, 5)
+        .map((l: { platform?: string; url?: string }) => ({
+          platform: (allowedPlatforms.has(l.platform || "")
+            ? l.platform
+            : "website") as UserSocialLink["platform"],
+          url: l.url!.trim(),
+        }));
+    }
+
+    await db.collection("users").updateOne({ _id: userId }, { $set: updateData });
 
     const updatedUser = await db
       .collection<UserDocument>("users")

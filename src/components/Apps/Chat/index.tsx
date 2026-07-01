@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { ChatMessage, Conversation, User } from "@/types/chat";
 import { useSession } from "next-auth/react";
+import { usePusherChat } from "@/hooks/usePusherChat";
 
 interface ChatProps {
   selectedConversation: Conversation | null;
@@ -56,6 +57,33 @@ const Chat: React.FC<ChatProps> = ({
       "x-user-avatar": currentUserAvatar,
     };
   }, [currentUserAvatar, currentUserId, currentUserName, currentUserRole]);
+
+  const chatIdentity = useMemo(
+    () => ({
+      id: currentUserId,
+      role: currentUserRole,
+      name: currentUserName,
+      avatar: currentUserAvatar,
+    }),
+    [currentUserAvatar, currentUserId, currentUserName, currentUserRole]
+  );
+
+  usePusherChat(
+    propSelectedConversation?.id ?? null,
+    chatIdentity,
+    (incoming) => {
+      const normalized = normalizeChatMessage(incoming);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === normalized.id)) return prev;
+        const withoutTemps = prev.filter((m) => !m.id.startsWith("temp-"));
+        return [...withoutTemps, normalized].sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+      });
+      lastMessageTimestampRef.current = new Date(normalized.timestamp);
+    }
+  );
 
   // Track last message timestamp to avoid unnecessary updates
   const lastMessageTimestampRef = useRef<Date | null>(null);
@@ -157,12 +185,12 @@ const Chat: React.FC<ChatProps> = ({
         }
       });
 
-      // Polling every 2 seconds for better real-time feel
+      // Polling fallback every 5s (Pusher handles real-time when configured)
       pollIntervalRef.current = setInterval(() => {
         if (isMounted && propSelectedConversation) {
           fetchMessages(propSelectedConversation.id, false);
         }
-      }, 2000);
+      }, 5000);
 
       // Refresh when tab becomes visible
       const handleVisibilityChange = () => {

@@ -62,7 +62,7 @@ const EnrollmentDetailsPage = () => {
         if (response.status === 404) {
           setError("Enrollment not found");
         } else if (response.status === 401) {
-          router.push("/authentication/sign-in");
+          router.push("/auth/signin");
           return;
         } else {
           setError("Failed to fetch enrollment details");
@@ -83,7 +83,7 @@ const EnrollmentDetailsPage = () => {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push(
-        `/authentication/sign-in?callbackUrl=/dashboard/enrolments/${enrollmentId}`
+        `/auth/signin?callbackUrl=/dashboard/enrolments/${enrollmentId}`
       );
       return;
     }

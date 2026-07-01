@@ -300,7 +300,7 @@ export default function DiscussionSection({
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm">
+    <div className="bg-white dark:bg-[#15203b] dark:border dark:border-gray-700 p-6 rounded-lg shadow-sm">
       <h2 className="text-2xl font-bold mb-6 flex items-center">
         <MessageSquare className="mr-2 text-purple-600" size={24} />
         Course Discussion

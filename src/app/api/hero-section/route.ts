@@ -1,6 +1,8 @@
 import { getDatabase } from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { HeroSectionDocument } from "@/models/HeroSection";
+import { canManageCms } from "@/lib/rbac";
 import { Collection } from "mongodb";
 
 const getHeroSectionCollection = async (): Promise<
@@ -57,6 +59,15 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  /* auth-guarded */
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canManageCms(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const collection = await getHeroSectionCollection();
     const body: Partial<HeroSectionDocument> = await req.json();

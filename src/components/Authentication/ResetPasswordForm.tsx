@@ -95,7 +95,7 @@ const ResetPasswordForm: React.FC = () => {
               <p className="mt-[15px] md:mt-[20px]">
                 Back to{" "}
                 <Link
-                  href="/authentication/sign-in"
+                  href="/auth/signin"
                   className="text-primary-500 transition-all font-semibold hover:underline"
                 >
                   Sign In

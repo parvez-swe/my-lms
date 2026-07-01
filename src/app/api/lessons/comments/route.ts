@@ -34,66 +34,55 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray();
 
-    // Populate user information
-    const commentsWithUserInfo = await Promise.all(
-      comments.map(async (comment) => {
-        let userName = comment.userName;
-        let userImage = comment.userImage;
+    const userIds = new Set<string>();
+    for (const comment of comments) {
+      userIds.add(comment.userId.toString());
+      for (const reply of comment.replies) {
+        userIds.add(reply.userId.toString());
+      }
+    }
 
-        if (!userName || !userImage) {
-          const userId =
-            typeof comment.userId === "string"
-              ? new ObjectId(comment.userId)
-              : comment.userId;
-          const user = await db
+    const users =
+      userIds.size > 0
+        ? await db
             .collection<UserDocument>("users")
-            .findOne({ _id: userId });
-          if (user) {
-            userName = userName || user.name;
-            userImage = userImage || user.image || "/images/profile.jpg";
-          }
-        }
+            .find({
+              _id: { $in: [...userIds].map((id) => new ObjectId(id)) },
+            })
+            .toArray()
+        : [];
+    const userMap = new Map(users.map((u) => [u._id!.toString(), u]));
 
-        const repliesWithUserInfo = await Promise.all(
-          comment.replies.map(async (reply) => {
-            let replyUserName = reply.userName;
-            let replyUserImage = reply.userImage;
+    const commentsWithUserInfo = comments.map((comment) => {
+      const user = userMap.get(comment.userId.toString());
+      const userName = comment.userName || user?.name;
+      const userImage =
+        comment.userImage || user?.image || "/images/profile.jpg";
 
-            if (!replyUserName || !replyUserImage) {
-              const replyUserId =
-                typeof reply.userId === "string"
-                  ? new ObjectId(reply.userId)
-                  : reply.userId;
-              const replyUser = await db
-                .collection<UserDocument>("users")
-                .findOne({ _id: replyUserId });
-              if (replyUser) {
-                replyUserName = replyUserName || replyUser.name;
-                replyUserImage =
-                  replyUserImage || replyUser.image || "/images/profile.jpg";
-              }
-            }
-
-            return {
-              id: reply._id?.toString(),
-              author: replyUserName,
-              avatar: replyUserImage || "/images/profile.jpg",
-              text: reply.text,
-              timestamp: getTimeAgo(reply.createdAt),
-            };
-          })
-        );
+      const repliesWithUserInfo = comment.replies.map((reply) => {
+        const replyUser = userMap.get(reply.userId.toString());
+        const replyUserName = reply.userName || replyUser?.name;
+        const replyUserImage =
+          reply.userImage || replyUser?.image || "/images/profile.jpg";
 
         return {
-          id: comment._id?.toString(),
-          author: userName,
-          avatar: userImage || "/images/profile.jpg",
-          text: comment.text,
-          timestamp: getTimeAgo(comment.createdAt),
-          replies: repliesWithUserInfo,
+          id: reply._id?.toString(),
+          author: replyUserName,
+          avatar: replyUserImage,
+          text: reply.text,
+          timestamp: getTimeAgo(reply.createdAt),
         };
-      })
-    );
+      });
+
+      return {
+        id: comment._id?.toString(),
+        author: userName,
+        avatar: userImage,
+        text: comment.text,
+        timestamp: getTimeAgo(comment.createdAt),
+        replies: repliesWithUserInfo,
+      };
+    });
 
     return NextResponse.json({
       success: true,

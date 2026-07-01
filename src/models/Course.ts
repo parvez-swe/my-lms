@@ -1,14 +1,24 @@
 import { ObjectId } from "mongodb";
 
+export type CourseStatus =
+  | "draft"
+  | "pending_approval"
+  | "published"
+  | "rejected";
+
 export interface CourseDocument {
   _id?: ObjectId;
   slug: string;
   title: string;
   price: string;
+  priceAmount?: number;
+  currency?: string;
   pricingType?: "free" | "paid";
   image: string;
   tutor: string;
   tutorImage: string;
+  instructorId?: string;
+  instructorEmail?: string;
   lessons: number;
   students: number;
   description: string;
@@ -34,6 +44,10 @@ export interface CourseDocument {
   }[];
   ratingAverage?: number;
   ratingCount?: number;
+  status?: CourseStatus;
+  statusRejectionReason?: string;
+  submittedAt?: Date;
+  publishedAt?: Date;
   faqs?: {
     question: string;
     answer: string;

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { UserDocument } from "@/models/User";
 import {
@@ -11,14 +12,20 @@ import { User } from "@/types/chat";
 export const dynamic = "force-dynamic";
 
 // GET /api/chat/users - Get available users to chat with
-export async function GET(request: NextRequest) {
+export async function GET() {
+  /* auth-guarded */
   try {
-    const currentUserId = request.headers.get("x-user-id");
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const currentUserId = session.user.id;
     const db = await getDatabase();
     const usersCursor = db
       .collection<UserDocument>("users")
       .find(
-        currentUserId && ObjectId.isValid(currentUserId)
+        ObjectId.isValid(currentUserId)
           ? { _id: { $ne: new ObjectId(currentUserId) } }
           : {},
         { projection: { name: 1, email: 1, role: 1, image: 1 } }

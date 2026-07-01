@@ -1,5 +1,5 @@
 import React from "react";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Course } from "@/data/courses";
 import EnrolledCourseClient from "./EnrolledCourseClient";
 import { auth } from "@/lib/auth";
@@ -17,10 +17,9 @@ const EnrolledCoursePage = async ({
 }) => {
   const { slug } = await params;
 
-  // Check authentication
   const session = await auth();
   if (!session?.user) {
-    redirect(`/authentication/sign-in?callbackUrl=/mycourses/${slug}`);
+    notFound();
   }
 
   // Fetch course from API

@@ -1,24 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { CourseDocument } from "@/models/Course";
 import { Course } from "@/data/courses";
+import { canCreateCourse } from "@/lib/courseAccess";
+import { DEFAULT_CURRENCY, parsePriceString } from "@/lib/currency";
+import { isAdminRole, normalizeRole } from "@/lib/rbac";
+import { getCourseStatus } from "@/lib/instructorProfile";
+import { UserDocument } from "@/models/User";
+import { ObjectId } from "mongodb";
 
-// Force dynamic rendering for API routes
 export const dynamic = "force-dynamic";
 
-// GET all courses
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    const { searchParams } = new URL(request.url);
+    const mine = searchParams.get("mine") === "true";
+    const includeAll = searchParams.get("all") === "true";
+
     const db = await getDatabase();
+    let query: Record<string, unknown> = {};
+
+    if (mine && session?.user) {
+      const role = normalizeRole(session.user.role);
+      if (role === "teacher" || role === "mentor") {
+        query = {
+          $or: [
+            { instructorId: session.user.id },
+            { instructorEmail: session.user.email },
+          ],
+        };
+      }
+    } else if (includeAll && session?.user && isAdminRole(session.user.role)) {
+      query = {};
+    } else {
+      query = {
+        $or: [
+          { status: "published" },
+          { status: { $exists: false } },
+        ],
+      };
+    }
+
     const courses = await db
       .collection<CourseDocument>("courses")
-      .find({})
+      .find(query)
+      .sort({ updatedAt: -1 })
       .toArray();
 
-    // Convert MongoDB documents to Course format (remove _id, add slug)
     const coursesData: Course[] = courses.map((course) => {
       const { _id: _courseId, ...courseData } = course;
-      return courseData as Course;
+      return {
+        ...courseData,
+        instructorId: course.instructorId?.toString(),
+        status: getCourseStatus(course),
+      } as Course;
     });
 
     return NextResponse.json({ success: true, data: coursesData });
@@ -31,18 +68,41 @@ export async function GET() {
   }
 }
 
-// POST create new course
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const db = await getDatabase();
+  const userDoc = session.user.id
+    ? await db.collection<UserDocument>("users").findOne({
+        _id: new ObjectId(session.user.id),
+      })
+    : null;
+
+  if (!canCreateCourse(session.user.role, userDoc || undefined)) {
+    const role = normalizeRole(session.user.role);
+    if (role === "teacher") {
+      return NextResponse.json(
+        {
+          error:
+            "Instructor profile must be approved by admin before creating courses",
+        },
+        { status: 403 }
+      );
+    }
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
 
-    // Generate slug from title
     const slug = body.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-    // Calculate total lessons
     const lessons =
       body.modules?.reduce(
         (acc: number, module: { lessons?: unknown[] }) =>
@@ -55,20 +115,49 @@ export async function POST(request: NextRequest) {
         ? body.pricingType
         : "paid";
 
-    const price = pricingType === "free" ? "$0" : body.price || "$0";
+    const currency = body.currency || DEFAULT_CURRENCY;
+    let priceAmount =
+      typeof body.priceAmount === "number" ? body.priceAmount : undefined;
+    let price =
+      pricingType === "free"
+        ? "Free"
+        : body.price || `${currency === "BDT" ? "৳" : "$"}0`;
+
+    if (pricingType === "paid" && priceAmount === undefined && body.price) {
+      const parsed = parsePriceString(body.price);
+      priceAmount = parsed.amount;
+    }
+
+    if (pricingType === "paid" && priceAmount !== undefined) {
+      const symbol = currency === "BDT" ? "৳" : currency === "USD" ? "$" : "";
+      price = `${symbol}${priceAmount.toLocaleString()}`;
+    }
+
+    const isTeacher =
+      session.user.role === "teacher" || session.user.role === "mentor";
+    const instructorId = isTeacher
+      ? session.user.id
+      : body.instructorId || undefined;
+
+    const now = new Date();
+    const courseStatus = isTeacher ? "pending_approval" : "published";
 
     const newCourse: CourseDocument = {
       slug,
       title: body.title,
       price,
+      priceAmount: pricingType === "free" ? 0 : priceAmount,
+      currency,
       pricingType,
       image: body.image || "/images/courses/course1.jpg",
-      tutor: body.tutor || "",
-      tutorImage: body.tutorImage || "/images/users/user1.jpg",
+      tutor: body.tutor || userDoc?.name || "",
+      tutorImage: body.tutorImage || userDoc?.image || "/images/users/user1.jpg",
+      instructorId: instructorId || undefined,
+      instructorEmail: body.instructorEmail || session.user.email || "",
       lessons,
       students: body.students || 0,
       description: body.description || "",
-      tutorBio: body.tutorBio || "",
+      tutorBio: body.tutorBio || userDoc?.bio || "",
       tutorSocials: body.tutorSocials || [],
       modules: body.modules || [],
       faqs: body.faqs || [],
@@ -76,13 +165,13 @@ export async function POST(request: NextRequest) {
       successStories: body.successStories || [],
       ratingAverage: 0,
       ratingCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      status: courseStatus,
+      submittedAt: isTeacher ? now : undefined,
+      publishedAt: isTeacher ? undefined : now,
+      createdAt: now,
+      updatedAt: now,
     };
 
-    const db = await getDatabase();
-
-    // Check if slug already exists
     const existingCourse = await db.collection("courses").findOne({ slug });
     if (existingCourse) {
       return NextResponse.json(
@@ -94,7 +183,13 @@ export async function POST(request: NextRequest) {
     const result = await db.collection("courses").insertOne(newCourse);
 
     return NextResponse.json(
-      { success: true, data: { ...newCourse, _id: result.insertedId } },
+      {
+        success: true,
+        data: { ...newCourse, _id: result.insertedId },
+        message: isTeacher
+          ? "Course submitted for admin approval"
+          : "Course published",
+      },
       { status: 201 }
     );
   } catch (error) {

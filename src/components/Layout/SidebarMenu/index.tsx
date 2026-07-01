@@ -4,12 +4,15 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
-// --- 1. Define Types for Navigation ---
+import { BRAND } from "@/lib/brand";
 
 interface SubMenuItem {
   title: string;
   path: string;
+  adminOnly?: boolean;
+  marketerAccess?: boolean;
   badge?: {
     text: string;
     color: "hot" | "popular" | "top" | "new";
@@ -20,12 +23,14 @@ interface MenuItem {
   type: "link" | "accordion";
   title: string;
   icon: string;
-  path?: string; // Only for 'link' type
+  path?: string;
+  adminOnly?: boolean;
+  marketerAccess?: boolean;
   badge?: {
     text: string;
     color: "orange" | "success" | "danger";
-  }; // Only for 'accordion' type
-  children?: SubMenuItem[]; // Only for 'accordion' type
+  };
+  children?: SubMenuItem[];
 }
 
 interface MenuSection {
@@ -40,523 +45,184 @@ const menuSections: MenuSection[] = [
     title: "Main",
     items: [
       {
-        type: "accordion",
-        title: "Dashboard",
+        type: "link",
+        title: "Overview",
         icon: "dashboard",
-        badge: { text: "30", color: "orange" },
-        children: [
-          { title: "eCommerce", path: "/dashboard/ecommerce/" },
-          {
-            title: "HelpDesk",
-            path: "/dashboard/helpdesk/",
-            badge: { text: "Hot", color: "hot" },
-          },
-          { title: "Analytics", path: "/dashboard/analytics/" },
-          { title: "School", path: "/dashboard/school/" },
-          { title: "Finance", path: "/dashboard/finance/" },
-        ],
+        path: "/dashboard/",
+      },
+      {
+        type: "link",
+        title: "Analytics",
+        icon: "analytics",
+        path: "/dashboard/analytics/",
+        adminOnly: true,
+        marketerAccess: true,
       },
       {
         type: "accordion",
         title: "Courses",
         icon: "book",
         children: [
-          { title: "Course List", path: "/dashboard/courses" },
-          { title: "Create Course", path: "/dashboard/courses/create" },
-          { title: "Enrolments", path: "/dashboard/enrolments" },
+          { title: "Course List", path: "/dashboard/courses/" },
+          {
+            title: "Create Course",
+            path: "/dashboard/courses/create/",
+            adminOnly: true,
+          },
+          {
+            title: "Enrolments",
+            path: "/dashboard/enrolments/",
+            adminOnly: true,
+          },
         ],
       },
       {
         type: "accordion",
-        title: "Front Pages",
+        title: "CMS",
         icon: "note_stack",
+        adminOnly: true,
+        marketerAccess: true,
         children: [
-          { title: "Home", path: "/" },
-          { title: "Features", path: "/front-pages/features/" },
-          { title: "Our Team", path: "/front-pages/team/" },
-          { title: "FAQ’s", path: "/front-pages/faq/" },
-          { title: "Contact", path: "/front-pages/contact/" },
+          { title: "All Pages", path: "/dashboard/pages/", marketerAccess: true },
+          { title: "Hero Section", path: "/dashboard/pages/hero-section/", marketerAccess: true },
+          { title: "About Me", path: "/dashboard/pages/about-me/", marketerAccess: true },
+          { title: "FAQ Section", path: "/dashboard/pages/faq-section/", marketerAccess: true },
+          {
+            title: "Why Choose Us",
+            path: "/dashboard/pages/why-choose-us-section/",
+            marketerAccess: true,
+          },
         ],
       },
     ],
   },
   {
-    title: "Apps",
+    title: "Communication",
     items: [
       {
         type: "link",
-        title: "Users",
-        icon: "format_list_bulleted",
-        path: "/dashboard/users/",
-      },
-      {
-        type: "link",
-        title: "To Do List",
-        icon: "format_list_bulleted",
-        path: "/apps/to-do-list/",
-      },
-      {
-        type: "link",
-        title: "Calendar",
-        icon: "date_range",
-        path: "/apps/calendar/",
-      },
-      {
-        type: "link",
-        title: "Contacts",
-        icon: "contact_page",
-        path: "/apps/contacts/",
-      },
-      { type: "link", title: "Chat", icon: "chat", path: "/apps/chat/" },
-      {
-        type: "accordion",
-        title: "Email",
+        title: "Messages",
         icon: "mail",
-        badge: { text: "3", color: "success" },
-        children: [
-          { title: "Inbox", path: "/apps/email/inbox/" },
-          { title: "Compose", path: "/apps/email/compose/" },
-          { title: "Read", path: "/apps/email/read/" },
-        ],
+        path: "/dashboard/messages/",
       },
       {
         type: "link",
-        title: "Kanban Board",
-        icon: "team_dashboard",
-        path: "/apps/kanban-board/",
+        title: "Chat",
+        icon: "chat",
+        path: "/dashboard/chats/",
       },
       {
-        type: "accordion",
-        title: "File Manager",
-        icon: "folder_open",
-        badge: { text: "7", color: "danger" },
-        children: [
-          { title: "My Drive", path: "/apps/file-manager/my-drive/" },
-          { title: "Assets", path: "/apps/file-manager/assets/" },
-          { title: "Projects", path: "/apps/file-manager/projects/" },
-          { title: "Personal", path: "/apps/file-manager/personal/" },
-          {
-            title: "Applications",
-            path: "/apps/file-manager/applications/",
-          },
-          { title: "Documents", path: "/apps/file-manager/documents/" },
-          { title: "Media", path: "/apps/file-manager/media/" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Pages",
-    items: [
-      {
-        type: "accordion",
-        title: "eCommerce",
-        icon: "shopping_cart",
-        children: [
-          { title: "Products Grid", path: "/ecommerce/products-grid/" },
-          { title: "Products List", path: "/ecommerce/products-list/" },
-          { title: "Product Details", path: "/ecommerce/product-details/" },
-          { title: "Create Product", path: "/ecommerce/create-product/" },
-          { title: "Edit Product", path: "/ecommerce/edit-product/" },
-          { title: "Cart", path: "/ecommerce/cart/" },
-          { title: "Checkout", path: "/ecommerce/checkout/" },
-          { title: "Orders", path: "/ecommerce/orders/" },
-          { title: "Order Details", path: "/ecommerce/order-details/" },
-          { title: "Create Order", path: "/ecommerce/create-order/" },
-          { title: "Order Tracking", path: "/ecommerce/order-tracking/" },
-          { title: "Customers", path: "/ecommerce/customers/" },
-          {
-            title: "Customer Details",
-            path: "/ecommerce/customer-details/",
-          },
-          { title: "Categories", path: "/ecommerce/categories/" },
-          { title: "Sellers", path: "/ecommerce/sellers/" },
-          { title: "Seller Details", path: "/ecommerce/seller-details/" },
-          { title: "Create Seller", path: "/ecommerce/create-seller/" },
-          { title: "Reviews", path: "/ecommerce/reviews/" },
-          { title: "Refunds", path: "/ecommerce/refunds/" },
-        ],
+        type: "link",
+        title: "AI Chat",
+        icon: "smart_toy",
+        path: "/dashboard/ai-chats/",
+        adminOnly: true,
       },
       {
-        type: "accordion",
-        title: "CRM",
-        icon: "handshake",
-        children: [
-          { title: "Contacts", path: "/crm/contacts/" },
-          { title: "Customers", path: "/crm/customers/" },
-          { title: "Leads", path: "/crm/leads/" },
-          { title: "Deals", path: "/crm/deals/" },
-        ],
+        type: "link",
+        title: "Instructor Approvals",
+        icon: "person_check",
+        path: "/dashboard/instructor-profiles/",
+        adminOnly: true,
       },
       {
-        type: "accordion",
-        title: "Project Management",
-        icon: "description",
-        children: [
-          {
-            title: "Project Overview",
-            path: "/project-management/project-overview/",
-          },
-          {
-            title: "Projects List",
-            path: "/project-management/projects-list/",
-          },
-          {
-            title: "Create Project",
-            path: "/project-management/create-project/",
-          },
-          { title: "Clients", path: "/project-management/clients/" },
-          { title: "Teams", path: "/project-management/teams/" },
-          {
-            title: "Kanban Board",
-            path: "/project-management/kanban-board/",
-          },
-          { title: "Users", path: "/project-management/users/" },
-        ],
+        type: "link",
+        title: "Course Approvals",
+        icon: "fact_check",
+        path: "/dashboard/course-approvals/",
+        adminOnly: true,
       },
       {
-        type: "accordion",
-        title: "LMS",
-        icon: "auto_stories",
-        children: [
-          { title: "Courses List", path: "/lms/courses-list/" },
-          { title: "Course Details", path: "/lms/course-details/" },
-          { title: "Lesson Preview", path: "/lms/lesson-preview/" },
-          { title: "Create Course", path: "/lms/create-course/" },
-          { title: "Edit Course", path: "/lms/edit-course/" },
-          { title: "Instructors", path: "/lms/instructors/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "HelpDesk",
-        icon: "support",
-        children: [
-          { title: "Tickets", path: "/helpdesk/tickets/" },
-          { title: "Ticket Details", path: "/helpdesk/ticket-details/" },
-          { title: "Agents", path: "/helpdesk/agents/" },
-          { title: "Reports", path: "/helpdesk/reports/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "NFT Marketplace",
-        icon: "store",
-        children: [
-          { title: "Marketplace", path: "/nft/marketplace/" },
-          { title: "Explore All", path: "/nft/explore-all/" },
-          { title: "Live Auction", path: "/nft/live-auction/" },
-          { title: "NFT Details", path: "/nft/nft-details/" },
-          { title: "Creators", path: "/nft/creators/" },
-          { title: "Creator Details", path: "/nft/creator-details/" },
-          { title: "Wallet Connect", path: "/nft/wallet-connect/" },
-          { title: "Create NFT", path: "/nft/create-nft/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Real Estate",
-        icon: "real_estate_agent",
-        children: [
-          { title: "Property List", path: "/real-estate/property-list/" },
-          {
-            title: "Property Details",
-            path: "/real-estate/property-details/",
-          },
-          { title: "Add Property", path: "/real-estate/add-property/" },
-          { title: "Agents", path: "/real-estate/agents/" },
-          { title: "Agent Details", path: "/real-estate/agent-details/" },
-          { title: "Add Agent", path: "/real-estate/add-agent/" },
-          { title: "Customers", path: "/real-estate/customers/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Finance",
-        icon: "calculate",
-        children: [
-          { title: "Wallet", path: "/finance/wallet/" },
-          { title: "Transactions", path: "/finance/transactions/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Doctor",
-        icon: "badge",
-        children: [
-          { title: "Patients List", path: "/doctor/patients-list/" },
-          { title: "Add Patient", path: "/doctor/add-patient/" },
-          { title: "Patient Details", path: "/doctor/patient-details/" },
-          { title: "Appointments", path: "/doctor/appointments/" },
-          { title: "Prescriptions", path: "/doctor/prescriptions/" },
-          {
-            title: "Write a Prescription",
-            path: "/doctor/write-prescription/",
-          },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Restaurant",
-        icon: "lunch_dining",
-        children: [
-          { title: "Menus", path: "/restaurant/menus/" },
-          { title: "Dish Details", path: "/restaurant/dish-details/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Hotel",
-        icon: "hotel",
-        children: [
-          { title: "Rooms List", path: "/hotel/rooms-list/" },
-          { title: "Room Details", path: "/hotel/room-details/" },
-          { title: "Guests List", path: "/hotel/guests-list/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Real Estate Agent",
-        icon: "location_away",
-        children: [
-          { title: "Properties", path: "/real-estate-agent/properties/" },
-          {
-            title: "Property Details",
-            path: "/real-estate-agent/property-details/",
-          },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Crypto Trader",
-        icon: "paid",
-        children: [
-          { title: "Transactions", path: "/crypto-trader/transactions/" },
-          {
-            title: "Gainers Losers",
-            path: "/crypto-trader/gainers-losers/",
-          },
-          { title: "Wallet", path: "/crypto-trader/wallet/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Events",
-        icon: "local_activity",
-        children: [
-          { title: "Events Grid", path: "/events/" },
-          { title: "Events List", path: "/events/events-list/" },
-          { title: "Event Details", path: "/events/event-details/" },
-          { title: "Create An Event", path: "/events/create-an-event/" },
-          { title: "Edit An Event", path: "/events/edit-an-event/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Social",
-        icon: "share",
-        children: [
-          { title: "Profile", path: "/social/profile/" },
-          { title: "Settings", path: "/social/settings/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Invoices",
-        icon: "content_paste",
-        children: [
-          { title: "Invoices", path: "/invoices/" },
-          { title: "Invoice Details", path: "/invoices/invoice-details/" },
-          { title: "Create Invoice", path: "/invoices/create-invoice/" },
-          { title: "Edit Invoice", path: "/invoices/edit-invoice/" },
-        ],
-      },
-      {
-        type: "accordion",
+        type: "link",
         title: "Users",
-        icon: "person",
-        children: [
-          { title: "Team Members", path: "/users/team-members/" },
-          { title: "Users List", path: "/users/users-list/" },
-          { title: "Add User", path: "/users/add-user/" },
-        ],
+        icon: "group",
+        path: "/dashboard/users/",
+        adminOnly: true,
       },
-      {
-        type: "accordion",
-        title: "Profile",
-        icon: "account_box",
-        children: [
-          { title: "User Profile", path: "/profile/user-profile/" },
-          { title: "Teams", path: "/profile/teams/" },
-          { title: "Projects", path: "/profile/projects/" },
-        ],
-      },
-      {
-        type: "link",
-        title: "Starter",
-        icon: "star_border",
-        path: "/starter/",
-      },
-    ],
-  },
-  {
-    title: "Modules",
-    items: [
-      {
-        type: "accordion",
-        title: "Icons",
-        icon: "emoji_emotions",
-        children: [
-          { title: "Material Symbols", path: "/icons/material-symbols/" },
-          { title: "RemixIcon", path: "/icons/remixicon/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "UI Elements",
-        icon: "qr_code_scanner",
-        children: [
-          { title: "Alerts", path: "/ui-elements/alerts/" },
-          { title: "Avatars", path: "/ui-elements/avatars/" },
-          { title: "Accordion", path: "/ui-elements/accordion/" },
-          { title: "Badges", path: "/ui-elements/badges/" },
-          { title: "Buttons", path: "/ui-elements/buttons/" },
-          { title: "Breadcrumb", path: "/ui-elements/breadcrumb/" },
-          { title: "Dropdowns", path: "/ui-elements/dropdowns/" },
-          { title: "Images", path: "/ui-elements/images/" },
-          { title: "Modal", path: "/ui-elements/modal/" },
-          { title: "Pagination", path: "/ui-elements/pagination/" },
-          { title: "Progress", path: "/ui-elements/progress/" },
-          { title: "Tooltips", path: "/ui-elements/tooltips/" },
-          { title: "Tabs", path: "/ui-elements/tabs/" },
-          { title: "Typography", path: "/ui-elements/typography/" },
-          { title: "Videos", path: "/ui-elements/videos/" },
-        ],
-      },
-      {
-        type: "link",
-        title: "Tables",
-        icon: "table_chart",
-        path: "/tables/",
-      },
-      {
-        type: "accordion",
-        title: "Forms",
-        icon: "forum",
-        children: [
-          { title: "Input & Select", path: "/forms/input-select/" },
-          {
-            title: "Checkboxes & Radios",
-            path: "/forms/checkboxes-radios/",
-          },
-          { title: "Rich Text Editor", path: "/forms/rich-text-editor/" },
-          { title: "File Uploader", path: "/forms/file-uploader/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Charts",
-        icon: "pie_chart",
-        children: [
-          { title: "Line", path: "/charts/line/" },
-          { title: "Area", path: "/charts/area/" },
-          { title: "Column", path: "/charts/column/" },
-          { title: "Mixed", path: "/charts/mixed/" },
-          { title: "RadialBar", path: "/charts/radialbar/" },
-          { title: "Radar", path: "/charts/radar/" },
-          { title: "Pie", path: "/charts/pie/" },
-          { title: "Polar", path: "/charts/polar/" },
-          { title: "More", path: "/charts/more/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Authentication",
-        icon: "lock_open",
-        children: [
-          { title: "Sign In", path: "/authentication/sign-in/" },
-          { title: "Sign Up", path: "/authentication/sign-up/" },
-          {
-            title: "Forgot Password",
-            path: "/authentication/forgot-password/",
-          },
-          {
-            title: "Reset Password",
-            path: "/authentication/reset-password/",
-          },
-          { title: "Confirm Email", path: "/authentication/confirm-email/" },
-          { title: "Lock Screen", path: "/authentication/lock-screen/" },
-          { title: "Logout", path: "/authentication/logout/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Extra Pages",
-        icon: "content_copy",
-        children: [
-          { title: "Pricing", path: "/pricing/" },
-          { title: "Timeline", path: "/timeline/" },
-          { title: "FAQ", path: "/faq/" },
-          { title: "Gallery", path: "/gallery/" },
-          { title: "Testimonials", path: "/testimonials/" },
-          { title: "Search", path: "/search/" },
-          { title: "Coming Soon", path: "/coming-soon/" },
-          { title: "Blank Page", path: "/blank-page/" },
-        ],
-      },
-      {
-        type: "accordion",
-        title: "Errors",
-        icon: "error",
-        children: [
-          { title: "404 Error Page", path: "/not-found/" },
-          { title: "Internal Error", path: "/internal-error/" },
-        ],
-      },
-      { type: "link", title: "Widgets", icon: "widgets", path: "/widgets/" },
-      { type: "link", title: "Maps", icon: "map", path: "/maps/" },
-      {
-        type: "link",
-        title: "Notifications",
-        icon: "notifications",
-        path: "/notifications/",
-      },
-      {
-        type: "link",
-        title: "Members",
-        icon: "people",
-        path: "/members/",
-      },
-    ],
-  },
-  {
-    title: "Others",
-    items: [
-      {
-        type: "link",
-        title: "My Profile",
-        icon: "account_circle",
-        path: "/my-profile/",
-      },
-      {
-        type: "accordion",
-        title: "Settings",
-        icon: "settings",
-        children: [
-          { title: "Account Settings", path: "/settings/" },
-          { title: "Change Password", path: "/settings/change-password/" },
-          { title: "Connections", path: "/settings/connections/" },
-          { title: "Privacy Policy", path: "/settings/privacy-policy/" },
-          {
-            title: "Terms & Conditions",
-            path: "/settings/terms-conditions/",
-          },
-        ],
-      },
-      { type: "link", title: "Logout", icon: "logout", path: "/" }, // Assuming logout redirects to home
     ],
   },
 ];
+
+const instructorMenuSections: MenuSection[] = [
+  {
+    title: "Instructor",
+    items: [
+      { type: "link", title: "Overview", icon: "dashboard", path: "/instructor/" },
+      { type: "link", title: "My Profile", icon: "person", path: "/instructor/profile/" },
+      {
+        type: "accordion",
+        title: "My Courses",
+        icon: "book",
+        children: [
+          { title: "Course List", path: "/instructor/courses/" },
+          { title: "Create Course", path: "/instructor/courses/create/" },
+        ],
+      },
+      { type: "link", title: "Messages", icon: "mail", path: "/dashboard/messages/" },
+      { type: "link", title: "Live Chat", icon: "chat", path: "/dashboard/chats/" },
+    ],
+  },
+];
+
+const marketerMenuSections: MenuSection[] = [
+  {
+    title: "Marketing",
+    items: [
+      { type: "link", title: "Overview", icon: "dashboard", path: "/marketer/" },
+      { type: "link", title: "Analytics", icon: "analytics", path: "/marketer/analytics/" },
+      {
+        type: "accordion",
+        title: "CMS",
+        icon: "note_stack",
+        children: [
+          { title: "All Pages", path: "/marketer/pages/" },
+          { title: "Hero Section", path: "/dashboard/pages/hero-section/" },
+          { title: "About Me", path: "/dashboard/pages/about-me/" },
+          { title: "FAQ Section", path: "/dashboard/pages/faq-section/" },
+          {
+            title: "Why Choose Us",
+            path: "/dashboard/pages/why-choose-us-section/",
+          },
+        ],
+      },
+    ],
+  },
+];
+
+function itemVisible(
+  item: { adminOnly?: boolean; marketerAccess?: boolean },
+  role?: string
+): boolean {
+  if (!item.adminOnly) return true;
+  if (role === "admin" || role === "superadmin") return true;
+  if (item.marketerAccess && role === "marketer") return true;
+  return false;
+}
+
+function filterMenuForRole(
+  sections: MenuSection[],
+  role?: string
+): MenuSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items
+        .filter((item) => itemVisible(item, role))
+        .map((item) => {
+          if (item.type !== "accordion" || !item.children) return item;
+          return {
+            ...item,
+            children: item.children.filter((child) => itemVisible(child, role)),
+          };
+        })
+        .filter(
+          (item) =>
+            item.type === "link" ||
+            (item.children && item.children.length > 0)
+        ),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 // --- 3. Helper Objects for Dynamic Classes ---
 
@@ -581,10 +247,30 @@ interface SidebarMenuProps {
 
 const SidebarMenu: React.FC<SidebarMenuProps> = ({ toggleActive }) => {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
 
-  // Use a string title for the open accordion. Default to "Dashboard".
+  const isInstructorPortal = pathname.startsWith("/instructor");
+  const isMarketerPortal = pathname.startsWith("/marketer");
+
+  const sections = isInstructorPortal
+    ? instructorMenuSections
+    : isMarketerPortal
+      ? marketerMenuSections
+      : menuSections;
+
+  const visibleSections = isInstructorPortal || isMarketerPortal
+    ? sections
+    : filterMenuForRole(sections, role);
+
+  const homeHref = isInstructorPortal
+    ? "/instructor/"
+    : isMarketerPortal
+      ? "/marketer/"
+      : "/dashboard/";
+
   const [openAccordion, setOpenAccordion] = React.useState<string | null>(
-    "Dashboard"
+    "Courses"
   );
 
   const toggleAccordion = (title: string) => {
@@ -597,17 +283,18 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ toggleActive }) => {
         {/* Logo and Close Button (No changes) */}
         <div className="logo bg-white dark:bg-[#0c1427] border-b border-gray-100 dark:border-[#172036] px-[25px] pt-[19px] pb-[15px] absolute z-[2] right-0 top-0 left-0">
           <Link
-            href="/dashboard/ecommerce/"
+            href={homeHref}
             className="transition-none relative flex items-center outline-none"
           >
             <Image
-              src="/images/logo-icon.svg"
-              alt="logo-icon"
-              width={26}
-              height={26}
+              src={BRAND.logo}
+              alt={BRAND.name}
+              width={32}
+              height={32}
+              className="rounded-md"
             />
-            <span className="font-bold text-black dark:text-white relative ltr:ml-[8px] rtl:mr-[8px] top-px text-xl">
-              Trezo
+            <span className="font-bold text-black dark:text-white relative ltr:ml-[8px] rtl:mr-[8px] top-px text-lg">
+              {BRAND.name}
             </span>
           </Link>
 
@@ -623,7 +310,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ toggleActive }) => {
         {/* Dynamic Menu Content */}
         <div className="pt-[89px] px-[22px] pb-[20px] h-screen overflow-y-scroll sidebar-custom-scrollbar">
           <div className="accordion">
-            {menuSections.map((section, sectionIndex) => (
+            {visibleSections.map((section, sectionIndex) => (
               <React.Fragment key={section.title}>
                 {/* Render Heading (e.g., "Main", "Apps") */}
                 <span

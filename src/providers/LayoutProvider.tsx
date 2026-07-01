@@ -22,6 +22,7 @@ const LayoutProvider: React.FC<LayoutProviderProps> = ({ children }) => {
 
   const isAuthPage = [
     "/authentication/sign-in/",
+    "/auth/signin",
     "/authentication/sign-up/",
     "/authentication/forgot-password/",
     "/authentication/reset-password/",

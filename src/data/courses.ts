@@ -4,10 +4,14 @@ export interface Course {
   slug: string;
   title: string;
   price: string;
+  priceAmount?: number;
+  currency?: string;
   pricingType?: "free" | "paid";
   image: string;
   tutor: string;
   tutorImage: string;
+  instructorId?: string;
+  instructorEmail?: string;
   lessons: number; // Total number of lessons
   students: number;
   description: string; // This will be used for the "About" section
@@ -54,6 +58,8 @@ export interface Course {
   }[];
   ratingAverage?: number;
   ratingCount?: number;
+  status?: "draft" | "pending_approval" | "published" | "rejected";
+  statusRejectionReason?: string;
 }
 
 export const courses: Course[] = [

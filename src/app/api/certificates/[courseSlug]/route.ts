@@ -2,14 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { EnrollmentDocument } from "@/models/Enrollment";
+import { CourseDocument } from "@/models/Course";
+import { CertificateDocument } from "@/models/Certificate";
 import { ObjectId } from "mongodb";
-import { Course } from "@/data/courses";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-// GET certificate data or generate certificate
+function buildCertificateId(courseSlug: string, userId: ObjectId): string {
+  const slugPart = courseSlug.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  const userPart = userId.toString().slice(-8).toUpperCase();
+  const randomPart = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `CERT-${slugPart}-${userPart}-${randomPart}`;
+}
+
+// GET certificate data or generate certificate record
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ courseSlug: string }> }
 ) {
   try {
@@ -25,12 +34,11 @@ export async function GET(
     const db = await getDatabase();
     const userId = new ObjectId(session.user.id);
 
-    // Check enrollment and completion
     const enrollment = await db
       .collection<EnrollmentDocument>("enrollments")
       .findOne({
-        userId: userId,
-        courseSlug: courseSlug,
+        userId,
+        courseSlug,
         status: "approved",
       });
 
@@ -41,21 +49,17 @@ export async function GET(
       );
     }
 
-    // Fetch course to get total lessons
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const courseResponse = await fetch(`${baseUrl}/api/courses/${courseSlug}`, {
-      cache: "no-store",
-    });
-    const courseResult = await courseResponse.json();
+    const course = await db
+      .collection<CourseDocument>("courses")
+      .findOne({ slug: courseSlug });
 
-    if (!courseResult.success) {
+    if (!course) {
       return NextResponse.json(
         { success: false, error: "Course not found" },
         { status: 404 }
       );
     }
 
-    const course: Course = courseResult.data;
     const totalLessons = course.modules.reduce(
       (acc, module) => acc + module.lessons.length,
       0
@@ -63,52 +67,64 @@ export async function GET(
     const completedLessons =
       enrollment.progress?.completedLessons?.length || 0;
 
-    // Check if course is completed (100% progress)
-    if (completedLessons < totalLessons) {
+    if (totalLessons === 0 || completedLessons < totalLessons) {
       return NextResponse.json(
         {
           success: false,
           error: "Course not completed",
-          progress: Math.round((completedLessons / totalLessons) * 100),
+          progress:
+            totalLessons > 0
+              ? Math.round((completedLessons / totalLessons) * 100)
+              : 0,
         },
         { status: 400 }
       );
     }
 
-    // Get user information
     const user = await db.collection("users").findOne({ _id: userId });
+    const studentName = user?.name || session.user.name || "Student";
+    const completionDate = enrollment.completedAt || new Date();
+    const now = new Date();
 
-    // Generate certificate data
-    const certificateData = {
-      studentName: user?.name || session.user.name || "Student",
-      courseTitle: course.title,
-      courseSlug: course.slug,
-      instructorName: course.tutor,
-      completionDate: enrollment.completedAt || new Date(),
-      certificateId: `CERT-${courseSlug.toUpperCase()}-${userId.toString().slice(-6)}-${Date.now()}`,
-    };
+    const certificate = await db
+      .collection<CertificateDocument>("certificates")
+      .findOneAndUpdate(
+        { userId, courseSlug },
+        {
+          $setOnInsert: {
+            userId,
+            courseSlug,
+            certificateId: buildCertificateId(courseSlug, userId),
+            issuedAt: now,
+            createdAt: now,
+          },
+          $set: {
+            studentName,
+            courseName: course.title,
+            completionDate,
+            updatedAt: now,
+          },
+        },
+        { upsert: true, returnDocument: "after" }
+      );
 
-    // Store certificate in database
-    await db.collection("certificates").updateOne(
-      {
-        userId: userId,
-        courseSlug: courseSlug,
-      },
-      {
-        $set: {
-          ...certificateData,
-          updatedAt: new Date(),
-        },
-        $setOnInsert: {
-          createdAt: new Date(),
-        },
-      },
-      { upsert: true }
-    );
+    if (!certificate) {
+      return NextResponse.json(
+        { success: false, error: "Failed to create certificate" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      data: certificateData,
+      data: {
+        studentName: certificate.studentName,
+        courseTitle: certificate.courseName,
+        courseSlug: certificate.courseSlug,
+        completionDate: certificate.completionDate,
+        certificateId: certificate.certificateId,
+        issuedAt: certificate.issuedAt,
+      },
     });
   } catch (error) {
     console.error("Failed to generate certificate:", error);

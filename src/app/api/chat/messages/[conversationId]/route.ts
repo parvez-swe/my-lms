@@ -8,6 +8,7 @@ import {
   listMessagesForConversation,
   markConversationRead,
 } from "@/lib/chatRepository";
+import { publishChatMessage } from "@/lib/pusherServer";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> }
 ) {
+  /* auth-guarded */
   try {
+    const currentUser = await getRequestParticipant(request);
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { conversationId } = await params;
     const { searchParams } = new URL(request.url);
     const limit = Math.min(
@@ -25,7 +32,6 @@ export async function GET(
     );
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    const currentUser = getRequestParticipant(request);
     const conversation = await getConversationDocument(conversationId);
 
     if (!conversation) {
@@ -68,7 +74,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> }
 ) {
+  /* auth-guarded */
   try {
+    const currentUser = await getRequestParticipant(request);
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { conversationId } = await params;
     const body = await request.json();
     const { text, attachments } = body as {
@@ -83,7 +95,6 @@ export async function POST(
       );
     }
 
-    const currentUser = getRequestParticipant(request);
     const conversation = await getConversationDocument(conversationId);
 
     if (!conversation) {
@@ -112,6 +123,8 @@ export async function POST(
     });
 
     await markConversationRead(conversationId, currentUser.id);
+
+    await publishChatMessage(conversationId, message);
 
     return NextResponse.json({ success: true, message }, { status: 201 });
   } catch (error) {

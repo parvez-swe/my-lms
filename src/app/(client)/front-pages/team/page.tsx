@@ -3,24 +3,21 @@
 import Cta from "@/components/FrontPage/Cta";
 import Footer from "@/components/FrontPage/Footer";
 import LightDarkModeButton from "@/components/FrontPage/LightDarkModeButton";
-import Navbar from "@/components/FrontPage/Navbar";
 import OurTeam from "@/components/FrontPage/OurTeam";
 import Image from "next/image";
 
 export default function Page() {
   return (
     <>
-      <div className="front-page-body overflow-hidden">
+      <div className="front-page-body overflow-hidden" data-full-bleed>
         <LightDarkModeButton />
 
-        <Navbar />
-
-        <div className="pt-[125px] md:pt-[145px] lg:pt-[185px] xl:pt-[195px] text-center">
-          <div className="container 2xl:max-w-[1320px] mx-auto px-[12px] relative z-[1]">
-            <h1 className="!mb-0 !leading-[1.2] !text-[32px] md:!text-[40px] lg:!text-[50px] xl:!text-[60px] -tracking-[.5px] md:-tracking-[1px] xl:-tracking-[1.5px]">
+        <div className="pt-10 pb-6 text-center md:pt-12 md:pb-8">
+          <div className="container relative z-[1] mx-auto px-[12px] 2xl:max-w-[1320px]">
+            <h1 className="!mb-0 !text-[32px] !leading-[1.2] -tracking-[.5px] md:!text-[40px] md:-tracking-[1px] lg:!text-[50px] xl:!text-[60px] xl:-tracking-[1.5px]">
               Our Team
             </h1>
-            <div className="absolute bottom-0 -z-[1] ltr:-right-[30px] rtl:-left-[30px] blur-[250px]">
+            <div className="absolute bottom-0 -z-[1] blur-[250px] ltr:-right-[30px] rtl:-left-[30px]">
               <Image
                 src="/images/front-pages/shape3.png"
                 alt="shape3"
@@ -28,7 +25,7 @@ export default function Page() {
                 height={685}
               />
             </div>
-            <div className="absolute -top-[220px] -z-[1] ltr:-left-[50px] rtl:-right-[50px] blur-[150px]">
+            <div className="absolute -top-[220px] -z-[1] blur-[150px] ltr:-left-[50px] rtl:-right-[50px]">
               <Image
                 src="/images/front-pages/shape5.png"
                 alt="shape3"
@@ -39,7 +36,7 @@ export default function Page() {
           </div>
         </div>
 
-        <div className="pt-[60px] md:pt-[80px] lg:pt-[100px] xl:pt-[150px]">
+        <div className="pt-10 md:pt-14 lg:pt-16">
           <OurTeam />
         </div>
 

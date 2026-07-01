@@ -1,6 +1,8 @@
 import { getDatabase } from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { WhyChooseUsDocument } from "@/models/WhyChooseUs";
+import { canManageCms } from "@/lib/rbac";
 import { Collection, ObjectId } from "mongodb";
 
 const getWhyChooseUsCollection = async (): Promise<
@@ -65,6 +67,15 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  /* auth-guarded */
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canManageCms(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const collection = await getWhyChooseUsCollection();
     const body: Partial<WhyChooseUsDocument> = await req.json();

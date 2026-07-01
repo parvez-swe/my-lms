@@ -3,8 +3,8 @@ import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { EnrollmentDocument, EnrollmentStatus } from "@/models/Enrollment";
 import { UserDocument } from "@/models/User";
-import { Filter } from "mongodb";
-import { ObjectId } from "mongodb";
+import { CourseDocument } from "@/models/Course";
+import { Filter, ObjectId } from "mongodb";
 
 // Force dynamic rendering
 export const dynamic = "force-dynamic";
@@ -44,32 +44,52 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray();
 
-    // Fetch user and course details for each enrollment
-    const enrollmentsWithDetails = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        const userId =
-          typeof enrollment.userId === "string"
-            ? new ObjectId(enrollment.userId)
-            : enrollment.userId;
-        const user = await db
-          .collection<UserDocument>("users")
-          .findOne({ _id: userId });
-        const course = await db
-          .collection("courses")
-          .findOne({ slug: enrollment.courseSlug });
+    const userIds = [
+      ...new Set(
+        enrollments.map((e) =>
+          typeof e.userId === "string" ? e.userId : e.userId.toString()
+        )
+      ),
+    ];
+    const slugs = [...new Set(enrollments.map((e) => e.courseSlug))];
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _id, password, ...userData } = user || {};
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _id: courseId, ...courseData } = course || {};
+    const [users, courses] = await Promise.all([
+      userIds.length
+        ? db
+            .collection<UserDocument>("users")
+            .find({ _id: { $in: userIds.map((id) => new ObjectId(id)) } })
+            .toArray()
+        : Promise.resolve([]),
+      slugs.length
+        ? db
+            .collection<CourseDocument>("courses")
+            .find({ slug: { $in: slugs } })
+            .toArray()
+        : Promise.resolve([]),
+    ]);
 
-        return {
-          ...enrollment,
-          user: userData,
-          course: courseData,
-        };
-      })
-    );
+    const userMap = new Map(users.map((u) => [u._id!.toString(), u]));
+    const courseMap = new Map(courses.map((c) => [c.slug, c]));
+
+    const enrollmentsWithDetails = enrollments.map((enrollment) => {
+      const userId =
+        typeof enrollment.userId === "string"
+          ? enrollment.userId
+          : enrollment.userId.toString();
+      const user = userMap.get(userId);
+      const course = courseMap.get(enrollment.courseSlug);
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _id, password, ...userData } = user || {};
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _id: courseId, ...courseData } = course || {};
+
+      return {
+        ...enrollment,
+        user: userData,
+        course: courseData,
+      };
+    });
 
     return NextResponse.json({
       success: true,

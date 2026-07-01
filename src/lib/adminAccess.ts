@@ -1,0 +1,18 @@
+export {
+  normalizeRole,
+  ALL_ROLES,
+  ROLE_LABELS,
+  isStaffRole,
+  isAdminRole,
+  isSuperAdmin,
+  canAccessAdminDashboard,
+  canManageUsers,
+  canManageEnrollments,
+  canManageCourses,
+  canEditCourseContent,
+  canViewAnalytics,
+  canManageCms,
+  canAssignRole,
+  isDashboardRouteAllowed,
+  isMentorDashboardRouteAllowed,
+} from "@/lib/rbac";

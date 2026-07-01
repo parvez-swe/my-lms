@@ -278,7 +278,7 @@ const SignUpForm: React.FC = () => {
               <p className="!leading-[1.6] mt-[15px]">
                 Already have an account.{" "}
                 <Link
-                  href="/authentication/sign-in"
+                  href="/auth/signin"
                   className="text-primary-500 transition-all font-semibold hover:underline"
                 >
                   Sign In

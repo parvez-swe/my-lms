@@ -11,7 +11,7 @@ import FeaturedCourses from "@/components/FrontPage/FeaturedCourses";
 export default function Home() {
   return (
     <>
-      <div className="front-page-body overflow-hidden">
+      <div className="front-page-body overflow-hidden" data-full-bleed>
         <LightDarkModeButton />
 
         <HeroBanner />

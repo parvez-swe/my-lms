@@ -22,73 +22,60 @@ export async function GET(
       .sort({ createdAt: -1 })
       .toArray();
 
-    // Populate user information for each discussion
-    const discussionsWithUserInfo = await Promise.all(
-      discussions.map(async (discussion) => {
-        let userName = discussion.userName;
-        let userImage = discussion.userImage;
+    const userIds = new Set<string>();
+    for (const discussion of discussions) {
+      userIds.add(discussion.userId.toString());
+      for (const reply of discussion.replies) {
+        userIds.add(reply.userId.toString());
+      }
+    }
 
-        // If user info is missing, fetch from users collection
-        if (!userName || !userImage) {
-          const userId =
-            typeof discussion.userId === "string"
-              ? new ObjectId(discussion.userId)
-              : discussion.userId;
-          const user = await db
+    const users =
+      userIds.size > 0
+        ? await db
             .collection<UserDocument>("users")
-            .findOne({ _id: userId });
-          if (user) {
-            userName = userName || user.name;
-            userImage = userImage || user.image || "/images/profile.jpg";
-          }
-        }
+            .find({
+              _id: { $in: [...userIds].map((id) => new ObjectId(id)) },
+            })
+            .toArray()
+        : [];
+    const userMap = new Map(users.map((u) => [u._id!.toString(), u]));
 
-        // Populate user info for replies
-        const repliesWithUserInfo = await Promise.all(
-          discussion.replies.map(async (reply) => {
-            let replyUserName = reply.userName;
-            let replyUserImage = reply.userImage;
+    const discussionsWithUserInfo = discussions.map((discussion) => {
+      const user = userMap.get(discussion.userId.toString());
+      const userName = discussion.userName || user?.name;
+      const userImage =
+        discussion.userImage || user?.image || "/images/profile.jpg";
 
-            if (!replyUserName || !replyUserImage) {
-              const replyUserId =
-                typeof reply.userId === "string"
-                  ? new ObjectId(reply.userId)
-                  : reply.userId;
-              const replyUser = await db
-                .collection<UserDocument>("users")
-                .findOne({ _id: replyUserId });
-              if (replyUser) {
-                replyUserName = replyUserName || replyUser.name;
-                replyUserImage =
-                  replyUserImage || replyUser.image || "/images/profile.jpg";
-              }
-            }
-
-            return {
-              _id: reply._id?.toString(),
-              userId: reply.userId.toString(),
-              userName: replyUserName,
-              userImage: replyUserImage,
-              text: reply.text,
-              createdAt: reply.createdAt,
-            };
-          })
-        );
+      const repliesWithUserInfo = discussion.replies.map((reply) => {
+        const replyUser = userMap.get(reply.userId.toString());
+        const replyUserName = reply.userName || replyUser?.name;
+        const replyUserImage =
+          reply.userImage || replyUser?.image || "/images/profile.jpg";
 
         return {
-          id: discussion._id?.toString(),
-          userId: discussion.userId.toString(),
-          userName,
-          userImage: userImage || "/images/profile.jpg",
-          text: discussion.text,
-          timeAgo: getTimeAgo(discussion.createdAt),
-          likes: discussion.likes.length,
-          likedBy: discussion.likes.map((id) => id.toString()),
-          replies: repliesWithUserInfo,
-          createdAt: discussion.createdAt,
+          _id: reply._id?.toString(),
+          userId: reply.userId.toString(),
+          userName: replyUserName,
+          userImage: replyUserImage,
+          text: reply.text,
+          createdAt: reply.createdAt,
         };
-      })
-    );
+      });
+
+      return {
+        id: discussion._id?.toString(),
+        userId: discussion.userId.toString(),
+        userName,
+        userImage,
+        text: discussion.text,
+        timeAgo: getTimeAgo(discussion.createdAt),
+        likes: discussion.likes.length,
+        likedBy: discussion.likes.map((id) => id.toString()),
+        replies: repliesWithUserInfo,
+        createdAt: discussion.createdAt,
+      };
+    });
 
     return NextResponse.json({
       success: true,

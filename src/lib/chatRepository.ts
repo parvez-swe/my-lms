@@ -63,8 +63,12 @@ export function mapUserRoleToChatRole(
     return "visitor";
   }
 
-  if (role === "mentor") {
+  if (role === "mentor" || role === "teacher") {
     return "instructor";
+  }
+
+  if (role === "marketer") {
+    return "student";
   }
 
   if (SUPPORTED_CHAT_ROLES.includes(role as ChatParticipantRole)) {

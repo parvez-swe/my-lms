@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { useSession } from "next-auth/react";
 import {
   Editor,
   EditorProvider,
@@ -23,17 +23,39 @@ import {
   Toolbar,
 } from "react-simple-wysiwyg";
 import { Course } from "@/data/courses";
+import {
+  DEFAULT_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  type CurrencyCode,
+} from "@/lib/currency";
+import ImageUpload from "@/components/ui/ImageUpload";
+import InstructorSelect, {
+  type InstructorOption,
+} from "@/components/ui/InstructorSelect";
 
-const CreateCourseForm: React.FC = () => {
+interface CreateCourseFormProps {
+  redirectTo?: string;
+  lockInstructor?: boolean;
+}
+
+const CreateCourseForm: React.FC<CreateCourseFormProps> = ({
+  redirectTo = "/dashboard/courses/",
+  lockInstructor = false,
+}) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Course>>({
     title: "",
     price: "",
+    priceAmount: undefined,
+    currency: DEFAULT_CURRENCY,
     pricingType: "paid",
     image: "/images/courses/course1.jpg",
     tutor: "",
     tutorImage: "/images/users/user1.jpg",
+    instructorEmail: "",
+    instructorId: "",
     students: 0,
     description: "",
     tutorBio: "",
@@ -44,8 +66,37 @@ const CreateCourseForm: React.FC = () => {
     faqs: [],
   });
 
+  const handleInstructorSelect = (instructor: InstructorOption | null) => {
+    if (!instructor) {
+      setFormData((prev) => ({
+        ...prev,
+        instructorId: "",
+        instructorEmail: "",
+      }));
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      instructorId: instructor.id,
+      instructorEmail: instructor.email,
+      tutor: instructor.name,
+      tutorImage: instructor.image,
+      tutorBio: instructor.bio || prev.tutorBio,
+    }));
+  };
+
   const [description, setDescription] = useState<string>("");
-  const [imagePreview, setImagePreview] = useState<string>("");
+
+  useEffect(() => {
+    if (!lockInstructor || !session?.user) return;
+    setFormData((prev) => ({
+      ...prev,
+      instructorId: session.user.id || "",
+      instructorEmail: session.user.email || "",
+      tutor: session.user.name || prev.tutor,
+      tutorImage: session.user.image || prev.tutorImage,
+    }));
+  }, [lockInstructor, session?.user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -58,7 +109,8 @@ const CreateCourseForm: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       pricingType: value,
-      price: value === "free" ? "$0" : prev.price || "",
+      price: value === "free" ? "Free" : prev.price || "",
+      priceAmount: value === "free" ? 0 : prev.priceAmount,
     }));
   };
 
@@ -318,11 +370,17 @@ const CreateCourseForm: React.FC = () => {
 
     try {
       const normalizedPrice =
-        formData.pricingType === "free" ? "$0" : formData.price || "$0";
+        formData.pricingType === "free"
+          ? "Free"
+          : formData.price ||
+            `${formData.currency === "BDT" ? "৳" : "$"}${formData.priceAmount ?? 0}`;
 
       const courseData = {
         ...formData,
         price: normalizedPrice,
+        priceAmount:
+          formData.pricingType === "free" ? 0 : formData.priceAmount,
+        currency: formData.currency || DEFAULT_CURRENCY,
         description: description || formData.description,
       };
 
@@ -337,7 +395,13 @@ const CreateCourseForm: React.FC = () => {
       const result = await response.json();
 
       if (result.success) {
-        router.push("/dashboard/courses");
+        alert(
+          result.message ||
+            (lockInstructor
+              ? "Course submitted for admin approval"
+              : "Course created successfully")
+        );
+        router.push(redirectTo);
       } else {
         alert("Failed to create course: " + result.error);
       }
@@ -428,17 +492,64 @@ const CreateCourseForm: React.FC = () => {
 
                 <div>
                   <label className="mb-[10px] text-black dark:text-white font-medium block">
-                    Price {formData.pricingType === "free" ? "(Free Course)" : "*"}
+                    Currency
+                  </label>
+                  <select
+                    name="currency"
+                    value={formData.currency || DEFAULT_CURRENCY}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        currency: e.target.value as CurrencyCode,
+                      }))
+                    }
+                    disabled={formData.pricingType === "free"}
+                    className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all focus:border-primary-500 disabled:opacity-60"
+                  >
+                    {SUPPORTED_CURRENCIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code} ({c.symbol}) — {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-[10px] text-black dark:text-white font-medium block">
+                    Price Amount{" "}
+                    {formData.pricingType === "free" ? "(Free Course)" : "*"}
+                  </label>
+                  <input
+                    type="number"
+                    name="priceAmount"
+                    min={0}
+                    step="0.01"
+                    value={formData.priceAmount ?? ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        priceAmount: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                    required={formData.pricingType !== "free"}
+                    disabled={formData.pricingType === "free"}
+                    className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 disabled:opacity-60"
+                    placeholder="E.g. 4900"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-[10px] text-black dark:text-white font-medium block">
+                    Price Label (optional)
                   </label>
                   <input
                     type="text"
                     name="price"
                     value={formData.price}
                     onChange={handleInputChange}
-                    required={formData.pricingType !== "free"}
                     disabled={formData.pricingType === "free"}
                     className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 disabled:opacity-60"
-                    placeholder="E.g. $99 or ৳490"
+                    placeholder="Auto-generated from amount if empty"
                   />
                 </div>
               </div>
@@ -462,33 +573,15 @@ const CreateCourseForm: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="mb-[10px] text-black dark:text-white font-medium block">
-                  Course Image URL
-                </label>
-                <input
-                  type="text"
-                  name="image"
-                  value={formData.image}
-                  onChange={(e) => {
-                    handleInputChange(e);
-                    setImagePreview(e.target.value);
-                  }}
-                  className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                  placeholder="/images/courses/course1.jpg"
-                />
-                {imagePreview && (
-                  <div className="mt-2">
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      width={200}
-                      height={120}
-                      className="rounded-md"
-                    />
-                  </div>
-                )}
-              </div>
+              <ImageUpload
+                label="Course Cover Image"
+                value={formData.image || ""}
+                onChange={(url) =>
+                  setFormData((prev) => ({ ...prev, image: url }))
+                }
+                folder="course-covers"
+                required
+              />
             </div>
           </div>
 
@@ -499,6 +592,14 @@ const CreateCourseForm: React.FC = () => {
             </div>
 
             <div className="trezo-card-content space-y-[20px]">
+              {!lockInstructor && (
+                <InstructorSelect
+                  value={formData.instructorId}
+                  onChange={handleInstructorSelect}
+                  required
+                />
+              )}
+
               <div className="grid sm:grid-cols-2 gap-[25px]">
                 <div>
                   <label className="mb-[10px] text-black dark:text-white font-medium block">
@@ -516,18 +617,30 @@ const CreateCourseForm: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="mb-[10px] text-black dark:text-white font-medium block">
-                    Tutor Image URL
-                  </label>
-                  <input
-                    type="text"
-                    name="tutorImage"
-                    value={formData.tutorImage}
-                    onChange={handleInputChange}
-                    className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                    placeholder="/images/users/user1.jpg"
+                  <ImageUpload
+                    label="Tutor Photo"
+                    value={formData.tutorImage || ""}
+                    onChange={(url) =>
+                      setFormData((prev) => ({ ...prev, tutorImage: url }))
+                    }
+                    folder="instructor-avatars"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-[10px] text-black dark:text-white font-medium block">
+                  Instructor Email
+                </label>
+                <input
+                  type="email"
+                  name="instructorEmail"
+                  value={formData.instructorEmail || ""}
+                  onChange={handleInputChange}
+                  readOnly={!lockInstructor && Boolean(formData.instructorId)}
+                  className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 disabled:opacity-70"
+                  placeholder="instructor@example.com"
+                />
               </div>
 
               <div>

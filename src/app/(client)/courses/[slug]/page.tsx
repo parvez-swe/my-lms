@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { resolveCoursePrice } from "@/lib/currency";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import {
@@ -122,24 +123,25 @@ const CourseDetailsPage = () => {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading course...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#0c1427]">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+          <p className="text-slate-600">Loading course details...</p>
+        </div>
       </div>
     );
   }
 
   if (!course) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <p className="text-red-600">Course not found</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#0c1427]">
+        <p className="text-rose-600 font-medium">Course not found</p>
       </div>
     );
   }
 
-  const isFreeCourse =
-    course.pricingType === "free" ||
-    course.price?.toLowerCase() === "free" ||
-    course.price === "$0";
+  const coursePricing = resolveCoursePrice(course);
+  const isFreeCourse = coursePricing.amount === 0;
   const ratingAverage = course.ratingAverage ?? 0;
   const ratingCount = course.ratingCount ?? 0;
 
@@ -160,23 +162,39 @@ const CourseDetailsPage = () => {
     course.faqs && course.faqs.length > 0 ? course.faqs : defaultFaqs;
 
   return (
-    <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
-      {/* --- Hero Section --- */}
-      <div className="bg-gradient-to-r from-purple-600  to-purple-800 pt-20 text-white shadow-sm">
-        <div className="container mx-auto px-4 py-12 lg:py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 dark:bg-[#0c1427] dark:text-gray-200" data-full-bleed>
+      {/* Hero */}
+      <div className="hero-dark relative overflow-hidden bg-gradient-to-br from-violet-800 via-indigo-800 to-slate-900 pt-28 text-white">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -right-20 top-10 h-64 w-64 rounded-full bg-violet-500/30 blur-3xl" />
+          <div className="absolute -left-10 bottom-0 h-48 w-48 rounded-full bg-indigo-400/20 blur-3xl" />
+        </div>
+        <div className="container relative mx-auto px-4 py-10 lg:py-14">
+          <nav className="mb-6 flex flex-wrap items-center gap-2 text-sm text-violet-200/80">
+            <Link href="/" className="transition hover:text-white">
+              Home
+            </Link>
+            <span>/</span>
+            <Link href="/courses/" className="transition hover:text-white">
+              Courses
+            </Link>
+            <span>/</span>
+            <span className="text-white/90 line-clamp-1">{course.title}</span>
+          </nav>
+
+          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
             {/* Left Column: Title, Info, Mentor */}
             <div className="lg:col-span-2">
-              <div className="flex items-center space-x-2 mb-4">
-                <span className="px-3 py-1 text-xs font-bold tracking-wider text-purple-900 uppercase bg-yellow-400 rounded-full">
-                  Best Seller
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-950">
+                  Popular
                 </span>
-                <span className="px-3 py-1 text-xs font-bold tracking-wider text-white uppercase bg-purple-500/30 rounded-full border border-purple-400">
-                  Level 1: Beginner
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                  {course.modules.length} modules · {totalLessons} lessons
                 </span>
               </div>
 
-              <h1 className="text-3xl md:text-5xl text-white font-extrabold mb-4 leading-tight">
+              <h1 className="mb-4 text-3xl font-extrabold leading-tight text-white md:text-5xl">
                 {course.title}
               </h1>
               <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
@@ -202,7 +220,7 @@ const CourseDetailsPage = () => {
                 </div>
               </div>
               <div
-                className="prose max-w-none text-gray-200 leading-relaxed prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:text-gray-700 prose-code:text-purple-600 prose-code:bg-purple-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-blockquote:border-l-purple-600 prose-blockquote:pl-4 prose-blockquote:italic"
+                className="prose prose-invert max-w-none leading-relaxed prose-headings:text-white prose-p:text-violet-100/90 prose-strong:text-white prose-ul:text-violet-100/90 prose-li:text-violet-100/90 prose-a:text-amber-300"
                 dangerouslySetInnerHTML={{ __html: course.description }}
               />
 
@@ -244,8 +262,8 @@ const CourseDetailsPage = () => {
             </div>
 
             {/* Right Column: Enroll Card */}
-            <div className="lg:col-span-1 row-start-1 lg:row-start-auto relative z-10">
-              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-purple-100 sticky top-6">
+            <div className="relative z-10 lg:col-span-1">
+              <div className="sticky top-28 overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/20 dark:border-gray-700 dark:bg-[#15203b]">
                 <div className="relative h-48 bg-gray-200">
                   <Image
                     src={course.image}
@@ -263,16 +281,16 @@ const CourseDetailsPage = () => {
                   </div>
                 </div>
 
-                <div className="p-6 text-gray-800">
-                  <div className="flex items-end gap-3 mb-6">
-                    <span className="text-4xl font-extrabold text-gray-900">
-                      {isFreeCourse ? "Free" : course.price}
+                <div className="p-6 text-gray-800 dark:text-gray-200">
+                  <div className="mb-6 flex items-end gap-3">
+                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
+                      {coursePricing.label}
                     </span>
                   </div>
 
                   <Link
                     href={`/courses/enroll/${course.slug}`}
-                    className="w-full bg-purple-600 text-white px-6 py-4 rounded-xl text-lg font-bold hover:bg-purple-700 transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-purple-200 mb-4 flex justify-center items-center gap-2"
+                    className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500"
                   >
                     {isFreeCourse ? "Start for Free" : "Enroll Now"}
                   </Link>
@@ -282,11 +300,11 @@ const CourseDetailsPage = () => {
                     Money-Back Guarantee
                   </p>
 
-                  <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
-                    <h4 className="font-bold text-sm text-gray-900">
+                  <div className="mt-6 space-y-3 border-t border-gray-100 pt-6 dark:border-gray-700">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">
                       This course includes:
                     </h4>
-                    <ul className="text-sm text-gray-600 space-y-2">
+                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                       <li className="flex items-center gap-2">
                         <MonitorPlay size={16} className="text-purple-500" />{" "}
                         {totalLessons} recorded video lectures
@@ -321,21 +339,21 @@ const CourseDetailsPage = () => {
         <div className="lg:grid lg:grid-cols-3 lg:gap-8">
           <div className="lg:col-span-2 space-y-10">
             {/* --- About Section --- */}
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+            <div className="bg-white dark:bg-[#15203b] p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                 <BookOpen className="text-purple-600" size={24} /> About this
                 course
               </h2>
               <div
-                className="prose max-w-none text-gray-700 leading-relaxed prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:text-gray-700 prose-code:text-purple-600 prose-code:bg-purple-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-blockquote:border-l-purple-600 prose-blockquote:pl-4 prose-blockquote:italic"
+                className="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:text-gray-700 dark:prose-ul:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-code:text-purple-600 prose-code:bg-purple-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-blockquote:border-l-purple-600 prose-blockquote:pl-4 prose-blockquote:italic"
                 dangerouslySetInnerHTML={{ __html: course.description }}
               />
             </div>
 
             {/* --- Module Section --- */}
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <div className="bg-white dark:bg-[#15203b] p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <MonitorPlay className="text-purple-600" size={24} /> Course
                   Curriculum
                 </h2>
@@ -348,7 +366,7 @@ const CourseDetailsPage = () => {
                 {course.modules.map((module, index) => (
                   <div
                     key={index}
-                    className="border rounded-xl overflow-hidden bg-white"
+                    className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-[#15203b]"
                   >
                     <button
                       onClick={() =>
@@ -356,10 +374,10 @@ const CourseDetailsPage = () => {
                           openModuleIndex === index ? -1 : index
                         )
                       }
-                      className={`w-full flex justify-between items-center p-4 text-left font-semibold transition-colors ${
+                      className={`flex w-full items-center justify-between p-4 text-left font-semibold transition-colors ${
                         openModuleIndex === index
-                          ? "bg-purple-50 text-purple-900"
-                          : "bg-white hover:bg-gray-50 text-gray-800"
+                          ? "bg-violet-50 text-violet-900 dark:bg-violet-900/30 dark:text-violet-100"
+                          : "bg-white text-gray-800 hover:bg-gray-50 dark:bg-[#15203b] dark:text-gray-200 dark:hover:bg-gray-800/50"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -377,7 +395,7 @@ const CourseDetailsPage = () => {
 
                     {/* Accordion Content */}
                     {openModuleIndex === index && (
-                      <div className="p-4 border-t border-purple-100 bg-gray-50/50">
+                      <div className="border-t border-violet-100 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-[#0c1427]/50">
                         <ul className="space-y-3">
                           {module.lessons.map((lesson, i) => {
                             const isPublic = lesson.isPublic === true;
@@ -388,10 +406,10 @@ const CourseDetailsPage = () => {
                             return (
                               <li
                                 key={i}
-                                className={`flex justify-between items-center text-sm group p-2 rounded-lg transition-colors border ${
+                                className={`flex items-center justify-between rounded-lg border p-2 text-sm transition-colors ${
                                   isPublic
-                                    ? "border-green-200 bg-green-50/50 hover:bg-green-50 cursor-pointer"
-                                    : "border-transparent hover:border-purple-100 hover:bg-white"
+                                    ? "cursor-pointer border-green-200 bg-green-50/50 hover:bg-green-50 dark:border-green-800 dark:bg-green-900/20 dark:hover:bg-green-900/30"
+                                    : "border-transparent hover:border-violet-100 hover:bg-white dark:hover:border-violet-500/30 dark:hover:bg-gray-800/50"
                                 }`}
                                 onClick={() => {
                                   if (isPublic && hasVideo) {
@@ -402,7 +420,7 @@ const CourseDetailsPage = () => {
                                   }
                                 }}
                               >
-                                <span className="flex items-center text-gray-700 group-hover:text-purple-700 font-medium flex-1">
+                                <span className="flex flex-1 items-center font-medium text-gray-700 group-hover:text-violet-700 dark:text-gray-300 dark:group-hover:text-violet-300">
                                   <PlayCircle
                                     size={16}
                                     className={`mr-3 ${
@@ -435,8 +453,8 @@ const CourseDetailsPage = () => {
 
             {/* --- FAQ Section --- */}
             {faqs.length > 0 && (
-              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+              <div className="bg-white dark:bg-[#15203b] p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                   <HelpCircle className="text-purple-600" size={24} /> Common
                   Questions (FAQ)
                 </h2>
@@ -444,15 +462,15 @@ const CourseDetailsPage = () => {
                   {faqs.map((faq, index) => (
                     <div
                       key={index}
-                      className="border rounded-xl overflow-hidden"
+                      className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700"
                     >
                       <button
                         onClick={() =>
                           setOpenFaqIndex(openFaqIndex === index ? -1 : index)
                         }
-                        className="w-full flex justify-between items-center p-4 text-left font-semibold bg-white hover:bg-gray-50 transition-colors"
+                        className="flex w-full items-center justify-between bg-white p-4 text-left font-semibold transition-colors hover:bg-gray-50 dark:bg-[#15203b] dark:hover:bg-gray-800/50"
                       >
-                        <span className="text-gray-800">{faq.question}</span>
+                        <span className="text-gray-800 dark:text-gray-200">{faq.question}</span>
                         {openFaqIndex === index ? (
                           <ChevronUp
                             size={20}
@@ -466,7 +484,7 @@ const CourseDetailsPage = () => {
                         )}
                       </button>
                       {openFaqIndex === index && (
-                        <div className="p-4 border-t bg-purple-50/30 text-gray-600 leading-relaxed text-sm">
+                        <div className="border-t bg-violet-50/30 p-4 text-sm leading-relaxed text-gray-600 dark:border-gray-700 dark:bg-violet-900/10 dark:text-gray-300">
                           {faq.answer}
                         </div>
                       )}
@@ -478,8 +496,8 @@ const CourseDetailsPage = () => {
 
             {/* --- Student Feedback Section --- */}
             {course.testimonials && course.testimonials.length > 0 && (
-              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+              <div className="bg-white dark:bg-[#15203b] p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                   <MessageCircle className="text-purple-600" size={24} />{" "}
                   Student Feedback
                 </h2>
@@ -521,8 +539,8 @@ const CourseDetailsPage = () => {
 
             {/* --- Success Story Section --- */}
             {course.successStories && course.successStories.length > 0 && (
-              <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+              <div className="bg-white dark:bg-[#15203b] p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
                   <Award className="text-purple-600" size={24} /> Success
                   Stories
                 </h2>
@@ -541,7 +559,7 @@ const CourseDetailsPage = () => {
                     />
                     <div className="z-10">
                       <div className="flex items-baseline gap-2 mb-1">
-                        <p className="text-lg font-bold text-gray-900">
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">
                           {story.studentName}
                         </p>
                         <span className="text-xs font-bold text-purple-600 bg-white px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
@@ -570,8 +588,8 @@ const CourseDetailsPage = () => {
           {/* --- Right Sidebar: Mentor Section --- */}
           <div className="lg:col-span-1 mt-12 lg:mt-0 space-y-6">
             {/* Mentor Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">
+            <div className="bg-white dark:bg-[#15203b] p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-6">
+              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
                 Meet Your Mentor
               </h2>
               <div className="flex items-center mb-4">
@@ -583,7 +601,7 @@ const CourseDetailsPage = () => {
                   height={64}
                 />
                 <div>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
                     {course.tutor}
                   </p>
                 </div>

@@ -5,10 +5,9 @@ import { getDatabase } from "@/lib/mongodb";
 import { UserDocument, UserRole } from "@/models/User";
 import bcrypt from "bcryptjs";
 
-// Validate required environment variables
-if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error("NEXTAUTH_SECRET is not set in environment variables");
-}
+import { validateEnv } from "./validateEnv";
+
+validateEnv();
 
 export const authOptions: NextAuthConfig = {
   providers: [
@@ -54,6 +53,7 @@ export const authOptions: NextAuthConfig = {
             name: user.name,
             role: user.role,
             image: user.image,
+            onboardingCompleted: user.onboardingCompleted !== false,
           };
         } catch (error: unknown) {
           console.error("Auth error:", error);
@@ -63,10 +63,14 @@ export const authOptions: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.onboardingCompleted = user.onboardingCompleted;
+      }
+      if (trigger === "update" && session?.onboardingCompleted !== undefined) {
+        token.onboardingCompleted = session.onboardingCompleted;
       }
       return token;
     },
@@ -75,19 +79,25 @@ export const authOptions: NextAuthConfig = {
         const role = (token.role as string) || "student";
         session.user.role = role as UserRole;
         session.user.id = (token.id as string) || "";
+        session.user.onboardingCompleted = token.onboardingCompleted !== false;
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
   },
   pages: {
-    signIn: "/authentication/sign-in",
-    error: "/authentication/sign-in",
+    signIn: "/auth/signin",
   },
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
   debug: process.env.NODE_ENV === "development",
 } satisfies NextAuthConfig;
 

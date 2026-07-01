@@ -1,10 +1,10 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Clock, BookOpen, AlertCircle, Loader2, Star } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Course } from "@/data/courses";
 import { EnrollmentDocument } from "@/models/Enrollment";
 
@@ -14,21 +14,15 @@ interface EnrollmentWithCourse extends EnrollmentDocument {
 
 const MyCoursesPage = () => {
   const { status } = useSession();
-  const router = useRouter();
   const [enrollments, setEnrollments] = useState<EnrollmentWithCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/authentication/sign-in?callbackUrl=/mycourses");
-      return;
-    }
-
     if (status === "authenticated") {
       fetchEnrollments();
     }
-  }, [status, router]);
+  }, [status]);
 
   const fetchEnrollments = async () => {
     try {
@@ -59,10 +53,6 @@ const MyCoursesPage = () => {
         </div>
       </div>
     );
-  }
-
-  if (status === "unauthenticated") {
-    return null; // Will redirect
   }
 
   if (error) {

@@ -47,7 +47,7 @@ const EnrollmentsPage = () => {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/authentication/sign-in?callbackUrl=/dashboard/enrolments");
+      router.push("/auth/signin?callbackUrl=/dashboard/enrolments");
       return;
     }
 

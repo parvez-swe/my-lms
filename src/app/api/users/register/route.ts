@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDatabase } from "@/lib/mongodb";
-import { UserDocument, UserRole } from "@/models/User";
+import { UserDocument } from "@/models/User";
 import bcrypt from "bcryptjs";
 import { sendOTPEmail } from "@/lib/email";
 import { generateOTP, getOTPExpiry } from "@/lib/otp";
+import { withRateLimit } from "@/lib/rateLimit";
 
 // Force dynamic rendering
 export const dynamic = "force-dynamic";
@@ -11,8 +12,16 @@ export const dynamic = "force-dynamic";
 // POST - Register new user
 export async function POST(request: NextRequest) {
   try {
+    const rateLimited = withRateLimit(
+      request,
+      "register",
+      5,
+      60 * 60 * 1000
+    );
+    if (rateLimited) return rateLimited;
+
     const body = await request.json();
-    const { email, password, name, role = "student" } = body;
+    const { email, password, name, role: requestedRole } = body;
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -21,14 +30,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
-    const validRoles: UserRole[] = ["student", "mentor", "admin", "superadmin"];
-    if (!validRoles.includes(role)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid role" },
-        { status: 400 }
-      );
-    }
+    const role =
+      requestedRole === "teacher" ? ("teacher" as const) : ("student" as const);
 
     const db = await getDatabase();
 
@@ -56,7 +59,9 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
       name,
-      role: role as UserRole,
+      role,
+      onboardingCompleted: false,
+      ...(role === "teacher" ? { instructorProfileStatus: "none" as const } : {}),
       otp,
       otpExpiry,
       otpAttempts: 0,

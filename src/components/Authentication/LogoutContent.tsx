@@ -81,7 +81,7 @@ const LogoutContent: React.FC = () => {
               </div>
 
               <Link
-                href="/authentication/sign-in"
+                href="/auth/signin"
                 className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400"
               >
                 <span className="flex items-center justify-center gap-[5px]">

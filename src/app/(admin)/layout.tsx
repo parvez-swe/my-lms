@@ -5,11 +5,13 @@ import "swiper/css";
 import "swiper/css/bundle";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { canAccessAdminDashboard } from "@/lib/adminAccess";
 
 // globals
 import "../globals.css";
 
 import LayoutProvider from "@/providers/LayoutProvider";
+import { ThemeScript } from "@/components/ThemeScript";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "../providers";
@@ -19,9 +21,12 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+import { BRAND } from "@/lib/brand";
+
 export const metadata: Metadata = {
-  title: "Trezo - Tailwind Nextjs Admin Dashboard Templat",
-  description: "Tailwind Nextjs Admin Dashboard Templat",
+  title: `${BRAND.name} — Admin`,
+  description: `Admin dashboard for ${BRAND.name}`,
+  icons: { icon: BRAND.favicon },
 };
 
 export default async function RootLayout({
@@ -31,12 +36,15 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
 
-  if (!session?.user || (session.user.role !== "admin" && session.user.role !== "superadmin")) {
-    redirect("/authentication/sign-in");
+  if (!session?.user || !canAccessAdminDashboard(session.user.role)) {
+    redirect("/auth/signin");
   }
 
   return (
-    <html lang="en" dir="ltr">
+    <html lang="en" dir="ltr" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body className={`${inter.variable} antialiased`}>
         <Providers>
           <LayoutProvider>{children}</LayoutProvider>{" "}

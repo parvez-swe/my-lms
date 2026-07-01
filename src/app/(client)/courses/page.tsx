@@ -1,17 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { Course } from "@/data/courses";
+import CourseCard from "@/components/ui/CourseCard";
 import {
-  BookOpen,
-  Users,
-  ArrowRight,
   Search,
   Filter,
   X,
-  Star,
   ChevronDown,
   Grid3x3,
   List,
@@ -114,7 +109,7 @@ const CoursesPage = () => {
   // Loading Skeleton
   if (loading) {
     return (
-      <div className="py-24 bg-gray-50 dark:bg-[#0c1427] min-h-screen">
+      <div className="pb-24 bg-gray-50 dark:bg-[#0c1427] min-h-screen">
         <div className="container mx-auto px-4">
           <div className="animate-pulse space-y-8">
             <div className="h-12 w-1/3 bg-gray-200 dark:bg-gray-700 rounded mx-auto"></div>
@@ -134,7 +129,7 @@ const CoursesPage = () => {
   }
 
   return (
-    <div className="min-h-screen py-20 lg:py-24 bg-gray-50 dark:bg-[#0b1121] relative overflow-hidden">
+    <div className="min-h-screen pb-20 lg:pb-24 bg-gray-50 dark:bg-[#0b1121] relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 opacity-5 dark:opacity-10 pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full blur-3xl"></div>
@@ -338,7 +333,7 @@ const CoursesPage = () => {
                   <CourseCard
                     key={course.slug || index}
                     course={course}
-                    viewMode={viewMode}
+                    variant={viewMode === "grid" ? "grid" : "list"}
                   />
                 ))}
               </div>
@@ -377,193 +372,5 @@ const CoursesPage = () => {
   );
 };
 
-// Course Card Component
-const CourseCard: React.FC<{
-  course: Course;
-  viewMode: "grid" | "list";
-}> = ({ course, viewMode }) => {
-  const rating = course.ratingAverage || 0;
-  const ratingCount = course.ratingCount || 0;
-
-  if (viewMode === "list") {
-    return (
-      <div className="bg-white dark:bg-[#15203b] rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col sm:flex-row group">
-        {/* Image */}
-        <div className="relative w-full sm:w-64 h-48 sm:h-auto overflow-hidden flex-shrink-0">
-          <Image
-            src={course.image || "/images/courses/course1.jpg"}
-            alt={course.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            width={300}
-            height={200}
-          />
-        </div>
-
-        {/* Content */}
-        <div className="p-6 flex-grow flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                {course.title}
-              </h3>
-              <div className="bg-purple-600 text-white px-3 py-1 rounded-full font-bold text-sm flex-shrink-0">
-                {course.price}
-              </div>
-            </div>
-
-            {/* Instructor */}
-            <div className="flex items-center gap-2 mb-3">
-              <Image
-                src={course.tutorImage || "/images/users/user1.jpg"}
-                alt={course.tutor}
-                className="w-8 h-8 rounded-full"
-                width={32}
-                height={32}
-              />
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                {course.tutor}
-              </span>
-            </div>
-
-            {/* Description Preview */}
-            {course.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                {course.description.replace(/<[^>]*>/g, "")}
-              </p>
-            )}
-
-            {/* Stats */}
-            <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-1.5">
-                <BookOpen
-                  size={16}
-                  className="text-purple-600 dark:text-purple-400"
-                />
-                <span>{course.lessons} Lessons</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Users
-                  size={16}
-                  className="text-purple-600 dark:text-purple-400"
-                />
-                <span>{course.students} Students</span>
-              </div>
-              {rating > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Star size={16} className="text-yellow-500 fill-yellow-500" />
-                  <span>{rating.toFixed(1)}</span>
-                  {ratingCount > 0 && (
-                    <span className="text-gray-500">({ratingCount})</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
-            <Link
-              href={`/courses/enroll/${course.slug}`}
-              className="flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
-            >
-              <span>Enroll Now</span>
-              <ArrowRight size={16} />
-            </Link>
-            <Link
-              href={`/courses/${course.slug}`}
-              className="flex-1 flex items-center justify-center gap-2 border-2 border-purple-600 dark:border-purple-500 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-semibold px-4 py-2 rounded-lg transition-colors"
-            >
-              Learn More
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Grid View
-  return (
-    <div className="group bg-white dark:bg-[#15203b] rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-800 h-full flex flex-col transform hover:-translate-y-2">
-      {/* Course Image */}
-      <div className="relative overflow-hidden h-56">
-        <Image
-          src={course.image || "/images/courses/course1.jpg"}
-          alt={course.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          width={400}
-          height={224}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        {/* Price Badge */}
-        <div className="absolute top-4 right-4 bg-purple-600 text-white px-4 py-1.5 rounded-full font-bold text-sm shadow-lg">
-          {course.price}
-        </div>
-      </div>
-
-      {/* Course Content */}
-      <div className="p-6 flex-grow flex flex-col">
-        {/* Title */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-          {course.title}
-        </h3>
-
-        {/* Instructor Info */}
-        <div className="flex items-center mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
-          <Image
-            src={course.tutorImage || "/images/users/user1.jpg"}
-            alt={course.tutor}
-            className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700"
-            width={40}
-            height={40}
-          />
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {course.tutor}
-            </p>
-          </div>
-        </div>
-
-        {/* Course Stats */}
-        <div className="flex items-center gap-3 mb-4 text-sm text-gray-600 dark:text-gray-400">
-          <div className="flex items-center gap-1">
-            <BookOpen
-              size={16}
-              className="text-purple-600 dark:text-purple-400"
-            />
-            <span>{course.lessons} Lessons</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users size={16} className="text-purple-600 dark:text-purple-400" />
-            <span>{course.students}</span>
-          </div>
-          {rating > 0 && (
-            <div className="flex items-center gap-1 ml-auto">
-              <Star size={16} className="text-yellow-500 fill-yellow-500" />
-              <span className="font-semibold">{rating.toFixed(1)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mt-auto space-y-2">
-          <Link
-            href={`/courses/enroll/${course.slug}`}
-            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-3 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg"
-          >
-            <span>Enroll Now</span>
-            <ArrowRight size={18} />
-          </Link>
-          <Link
-            href={`/courses/${course.slug}`}
-            className="w-full flex items-center justify-center gap-2 bg-gray-50 dark:bg-[#0c1427] hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-white font-semibold px-4 py-2.5 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
-          >
-            Learn More
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// 👇 ADD THIS LINE HERE
+// Course listing page
 export default CoursesPage;

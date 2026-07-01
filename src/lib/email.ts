@@ -398,3 +398,66 @@ export async function sendOTPEmail(
     return { success: false, error };
   }
 }
+
+export async function sendTempPasswordEmail(
+  userEmail: string,
+  userName: string,
+  tempPassword: string
+) {
+  const signInUrl = `${
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  }/auth/signin`;
+
+  const mailOptions = {
+    from: `"${process.env.SMTP_FROM_NAME || "Learning Platform"}" <${
+      process.env.SMTP_USER
+    }>`,
+    to: userEmail,
+    subject: "Your temporary password",
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .password-box { background: white; padding: 16px; border: 2px dashed #667eea; border-radius: 8px; text-align: center; margin: 20px 0; font-family: monospace; font-size: 18px; }
+            .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin-top: 16px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header"><h1>Password Reset</h1></div>
+            <div class="content">
+              <p>Hello ${userName},</p>
+              <p>An administrator reset your password. Use this temporary password to sign in:</p>
+              <div class="password-box">${tempPassword}</div>
+              <p>Please change your password after signing in.</p>
+              <div style="text-align:center;">
+                <a href="${signInUrl}" class="button">Sign In</a>
+              </div>
+              <p>Best regards,<br>The Learning Platform Team</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  };
+
+  try {
+    const transporter = getTransporter();
+    if (!transporter) {
+      console.warn("Email transporter not available. Skipping email send.");
+      return { success: false, error: "Email service not configured" };
+    }
+
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error) {
+    console.error("Email sending error:", error);
+    return { success: false, error };
+  }
+}

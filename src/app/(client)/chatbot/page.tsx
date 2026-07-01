@@ -59,8 +59,14 @@ export default function ChatbotPage() {
     setIsLoading(true);
 
     try {
-      // Get bot response
-      const response = await getChatbotResponse(userMessage);
+      const history = messages
+        .filter((m) => m.id !== 1)
+        .map((m) => ({
+          role: m.isSender ? ("user" as const) : ("assistant" as const),
+          content: m.text,
+        }));
+
+      const response = await getChatbotResponse(userMessage, history);
 
       // Add bot response
       const botMessageObj: ChatMessage = {

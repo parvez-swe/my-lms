@@ -21,17 +21,14 @@ function HeroBanner({ data }: HeroBannerProps) {
 
   return (
     <section className="relative bg-gray-50 dark:bg-[#111111] text-gray-900 dark:text-white overflow-hidden min-h-[600px] lg:min-h-[800px] flex items-center font-sans transition-colors duration-500">
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-10">
+      <div className="pointer-events-none absolute inset-0 z-0">
         <div
-          className="absolute inset-0 bg-repeat dark:invert transition-all duration-500"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.12] transition-all duration-500 dark:opacity-[0.08] dark:invert"
           style={{
-            backgroundImage:
-              'url("https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/2560px-World_map_-_low_resolution.svg.png")',
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundImage: "url('/images/front-pages/world-map.svg')",
           }}
-        ></div>
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 dark:from-[#111111] to-transparent transition-colors duration-500"></div>
+        />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 to-transparent transition-colors duration-500 dark:from-[#111111]" />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-20 lg:pt-0">

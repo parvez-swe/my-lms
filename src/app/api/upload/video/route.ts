@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadVideoToCloudinary } from "@/lib/cloudinary";
+import { auth } from "@/lib/auth";
+import { canEditCourseContent } from "@/lib/rbac";
+import { uploadMedia } from "@/lib/storage";
 
-// Force dynamic rendering for API routes
 export const dynamic = "force-dynamic";
 
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024;
+
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canEditCourseContent(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const formData = await request.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as File | null;
     const folder = (formData.get("folder") as string) || "course-videos";
 
     if (!file) {
@@ -17,7 +28,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
     if (!file.type.startsWith("video/")) {
       return NextResponse.json(
         { success: false, error: "File must be a video" },
@@ -25,27 +35,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 500MB)
-    const maxSize = 500 * 1024 * 1024; // 500MB
-    if (file.size > maxSize) {
+    if (file.size > MAX_VIDEO_SIZE) {
       return NextResponse.json(
         { success: false, error: "File size exceeds 500MB limit" },
         { status: 400 }
       );
     }
 
-    // Convert File to Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Upload to Cloudinary
-    const result = await uploadVideoToCloudinary(buffer, folder);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const result = await uploadMedia(buffer, {
+      folder,
+      resourceType: "video",
+      mimeType: file.type,
+      filename: file.name,
+    });
 
     return NextResponse.json({
       success: true,
       data: {
         publicId: result.publicId,
         url: result.url,
+        provider: result.provider,
       },
     });
   } catch (error) {
@@ -53,11 +63,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to upload video",
+        error: error instanceof Error ? error.message : "Failed to upload video",
       },
       { status: 500 }
     );
   }
 }
-

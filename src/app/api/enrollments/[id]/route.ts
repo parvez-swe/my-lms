@@ -4,6 +4,7 @@ import { getDatabase } from "@/lib/mongodb";
 import { EnrollmentDocument } from "@/models/Enrollment";
 import { CourseDocument } from "@/models/Course";
 import { sendEnrollmentStatusEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import { ObjectId } from "mongodb";
 
 // Force dynamic rendering
@@ -82,19 +83,41 @@ export async function PUT(
       .collection<CourseDocument>("courses")
       .findOne({ slug: enrollment.courseSlug });
 
-    // Send status update email if status changed to approved or rejected
+    // Send status update email and in-app notification
     if (
       (status === "approved" || status === "rejected") &&
-      user?.email &&
-      user?.name &&
+      enrollment.status !== status &&
       course
     ) {
-      await sendEnrollmentStatusEmail(
-        user.email,
-        user.name,
-        course,
-        status as "approved" | "rejected"
-      );
+      if (user?.email && user?.name) {
+        await sendEnrollmentStatusEmail(
+          user.email,
+          user.name,
+          course,
+          status as "approved" | "rejected"
+        );
+      }
+
+      const studentUserId =
+        typeof enrollment.userId === "string"
+          ? enrollment.userId
+          : enrollment.userId.toString();
+
+      if (status === "approved") {
+        await createNotification(db, {
+          userId: studentUserId,
+          type: "enrollment_approved",
+          message: `Your enrollment in "${course.title}" has been approved.`,
+          link: `/mycourses/${enrollment.courseSlug}`,
+        });
+      } else {
+        await createNotification(db, {
+          userId: studentUserId,
+          type: "enrollment_rejected",
+          message: `Your enrollment in "${course.title}" was not approved.`,
+          link: `/courses/${enrollment.courseSlug}`,
+        });
+      }
     }
 
     const updatedEnrollment = await db

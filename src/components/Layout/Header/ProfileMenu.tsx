@@ -106,10 +106,12 @@ const ProfileMenu: React.FC = () => {
                 My Profile
               </Link>
             </li>
-            {(userRole === "admin" || userRole === "superadmin") && (
+            {(userRole === "admin" ||
+              userRole === "superadmin" ||
+              userRole === "mentor") && (
               <li>
                 <Link
-                  href="/dashboard/ecommerce/"
+                  href="/dashboard/"
                   className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
                     pathname?.startsWith("/dashboard") ? "text-primary-500" : ""
                   }`}
@@ -136,37 +138,28 @@ const ProfileMenu: React.FC = () => {
                 </Link>
               </li>
             )}
+            {(userRole === "admin" ||
+              userRole === "superadmin" ||
+              userRole === "mentor") && (
+              <li>
+                <Link
+                  href="/dashboard/chats/"
+                  className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
+                    pathname === "/dashboard/chats/" ? "text-primary-500" : ""
+                  }`}
+                >
+                  <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
+                    chat
+                  </i>
+                  Chat
+                </Link>
+              </li>
+            )}
             <li>
               <Link
-                href="/apps/chat/"
+                href="/profile?tab=billing"
                 className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/apps/chat/" ? "text-primary-500" : ""
-                }`}
-              >
-                <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
-                  chat
-                </i>
-                Messages
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/apps/to-do-list/"
-                className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/apps/to-do-list/" ? "text-primary-500" : ""
-                }`}
-              >
-                <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
-                  format_list_bulleted
-                </i>
-                My Task
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/ecommerce/checkout/"
-                className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/ecommerce/checkout/" ? "text-primary-500" : ""
+                  pathname === "/profile" ? "text-primary-500" : ""
                 }`}
               >
                 <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
@@ -182,43 +175,15 @@ const ProfileMenu: React.FC = () => {
           <ul>
             <li>
               <Link
-                href="/settings/"
+                href="/front-pages/faq/"
                 className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/settings/" ? "text-primary-500" : ""
-                }`}
-              >
-                <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
-                  settings
-                </i>
-                Settings
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/faq/"
-                className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/faq/" ? "text-primary-500" : ""
+                  pathname === "/front-pages/faq/" ? "text-primary-500" : ""
                 }`}
               >
                 <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
                   support
                 </i>
                 Support
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/authentication/lock-screen/"
-                className={`block relative py-[7px] ltr:pl-[50px] ltr:pr-[20px] rtl:pr-[50px] rtl:pl-[20px] text-black dark:text-white transition-all hover:text-primary-500 ${
-                  pathname === "/authentication/lock-screen/"
-                    ? "text-primary-500"
-                    : ""
-                }`}
-              >
-                <i className="material-symbols-outlined top-1/2 -translate-y-1/2 !text-[22px] absolute ltr:left-[20px] rtl:right-[20px]">
-                  lock
-                </i>
-                Lock Screen
               </Link>
             </li>
             <li>

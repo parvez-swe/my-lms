@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDatabase } from "@/lib/mongodb";
 import { UserDocument } from "@/models/User";
 import { isOTPExpired, isValidOTPFormat } from "@/lib/otp";
+import { withRateLimit } from "@/lib/rateLimit";
 
 // Force dynamic rendering
 export const dynamic = "force-dynamic";
@@ -9,6 +10,14 @@ export const dynamic = "force-dynamic";
 // POST - Verify OTP
 export async function POST(request: NextRequest) {
   try {
+    const rateLimited = withRateLimit(
+      request,
+      "verify-otp",
+      10,
+      60 * 60 * 1000
+    );
+    if (rateLimited) return rateLimited;
+
     const body = await request.json();
     const { email, otp } = body;
 

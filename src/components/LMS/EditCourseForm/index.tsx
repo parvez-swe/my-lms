@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
   Editor,
   EditorProvider,
@@ -23,12 +22,23 @@ import {
   Toolbar,
 } from "react-simple-wysiwyg";
 import { Course } from "@/data/courses";
+import QuizBuilder from "@/components/Admin/QuizBuilder";
+import ImageUpload from "@/components/ui/ImageUpload";
+import InstructorSelect, {
+  type InstructorOption,
+} from "@/components/ui/InstructorSelect";
 
 interface EditCourseFormProps {
   courseId: string;
+  redirectTo?: string;
+  lockInstructor?: boolean;
 }
 
-const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
+const EditCourseForm: React.FC<EditCourseFormProps> = ({
+  courseId,
+  redirectTo = "/dashboard/courses/",
+  lockInstructor = false,
+}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +49,8 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
     image: "/images/courses/course1.jpg",
     tutor: "",
     tutorImage: "/images/users/user1.jpg",
+    instructorEmail: "",
+    instructorId: "",
     students: 0,
     description: "",
     tutorBio: "",
@@ -50,6 +62,25 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
   });
 
   const [description, setDescription] = useState<string>("");
+
+  const handleInstructorSelect = (instructor: InstructorOption | null) => {
+    if (!instructor) {
+      setFormData((prev) => ({
+        ...prev,
+        instructorId: "",
+        instructorEmail: "",
+      }));
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      instructorId: instructor.id,
+      instructorEmail: instructor.email,
+      tutor: instructor.name,
+      tutorImage: instructor.image,
+      tutorBio: instructor.bio || prev.tutorBio,
+    }));
+  };
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -67,7 +98,7 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
           setDescription(result.data.description || "");
         } else {
           alert("Course not found");
-          router.push("/dashboard/courses");
+          router.push(redirectTo);
         }
       } catch (error) {
         console.error("Failed to fetch course:", error);
@@ -80,7 +111,7 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
     if (courseId) {
       fetchCourse();
     }
-  }, [courseId, router]);
+  }, [courseId, router, redirectTo]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -307,7 +338,7 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
       const result = await response.json();
 
       if (result.success) {
-        router.push("/dashboard/courses");
+        router.push(redirectTo);
       } else {
         alert("Failed to update course: " + result.error);
       }
@@ -440,30 +471,15 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
                 />
               </div>
 
-              <div>
-                <label className="mb-[10px] text-black dark:text-white font-medium block">
-                  Course Image URL
-                </label>
-                <input
-                  type="text"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleInputChange}
-                  className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                  placeholder="/images/courses/course1.jpg"
-                />
-                {formData.image && (
-                  <div className="mt-2">
-                    <Image
-                      src={formData.image}
-                      alt="Preview"
-                      width={200}
-                      height={120}
-                      className="rounded-md"
-                    />
-                  </div>
-                )}
-              </div>
+              <ImageUpload
+                label="Course Cover Image"
+                value={formData.image || ""}
+                onChange={(url) =>
+                  setFormData((prev) => ({ ...prev, image: url }))
+                }
+                folder="course-covers"
+                required
+              />
             </div>
           </div>
 
@@ -543,6 +559,13 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
             </div>
 
             <div className="trezo-card-content space-y-[20px]">
+              {!lockInstructor && (
+                <InstructorSelect
+                  value={formData.instructorId}
+                  onChange={handleInstructorSelect}
+                />
+              )}
+
               <div className="grid sm:grid-cols-2 gap-[25px]">
                 <div>
                   <label className="mb-[10px] text-black dark:text-white font-medium block">
@@ -560,18 +583,30 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
                 </div>
 
                 <div>
-                  <label className="mb-[10px] text-black dark:text-white font-medium block">
-                    Tutor Image URL
-                  </label>
-                  <input
-                    type="text"
-                    name="tutorImage"
-                    value={formData.tutorImage}
-                    onChange={handleInputChange}
-                    className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                    placeholder="/images/users/user1.jpg"
+                  <ImageUpload
+                    label="Tutor Photo"
+                    value={formData.tutorImage || ""}
+                    onChange={(url) =>
+                      setFormData((prev) => ({ ...prev, tutorImage: url }))
+                    }
+                    folder="instructor-avatars"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-[10px] text-black dark:text-white font-medium block">
+                  Instructor Email
+                </label>
+                <input
+                  type="email"
+                  name="instructorEmail"
+                  value={formData.instructorEmail || ""}
+                  onChange={handleInputChange}
+                  readOnly={!lockInstructor && Boolean(formData.instructorId)}
+                  className="h-[55px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500 disabled:opacity-70"
+                  placeholder="instructor@example.com"
+                />
               </div>
 
               <div>
@@ -855,6 +890,15 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
                         >
                           Remove Lesson
                         </button>
+
+                        {formData.slug && (
+                          <QuizBuilder
+                            courseSlug={formData.slug}
+                            moduleIndex={moduleIndex}
+                            lessonIndex={lessonIndex}
+                            label={`Lesson ${lessonIndex + 1} Quiz`}
+                          />
+                        )}
                       </div>
                     ))}
                     <button
@@ -864,6 +908,14 @@ const EditCourseForm: React.FC<EditCourseFormProps> = ({ courseId }) => {
                     >
                       + Add Lesson
                     </button>
+
+                    {formData.slug && (
+                      <QuizBuilder
+                        courseSlug={formData.slug}
+                        moduleIndex={moduleIndex}
+                        label={`Module ${moduleIndex + 1} Quiz`}
+                      />
+                    )}
                   </div>
                 </div>
               ))}

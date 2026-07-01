@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import LessonView from "@/components/LMS/LessonView";
 import { Course } from "@/data/courses";
 import { EnrollmentDocument } from "@/models/Enrollment";
@@ -54,11 +53,43 @@ const LessonClientPage: React.FC<LessonClientPageProps> = ({
   enrollment: initialEnrollment,
 }) => {
   const { status } = useSession();
-  const router = useRouter();
   const [enrollment, setEnrollment] =
     useState<EnrollmentDocument>(initialEnrollment);
+  const [hasQuiz, setHasQuiz] = useState<boolean | null>(null);
 
-  const updateProgress = async (lessonId: string, completed: boolean) => {
+  const lessonId = `${moduleIndex}-${lessonIndex}`;
+
+  const checkForQuiz = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/quizzes/course/${slug}/${moduleIndex}?lessonIndex=${lessonIndex}`
+      );
+      const result = await res.json();
+      setHasQuiz(result.success && !!result.data);
+    } catch {
+      setHasQuiz(false);
+    }
+  }, [slug, moduleIndex, lessonIndex]);
+
+  useEffect(() => {
+    checkForQuiz();
+  }, [checkForQuiz]);
+
+  const checkCertificate = async (completedLessons: string[]) => {
+    const totalLessons = course.modules.reduce(
+      (acc, mod) => acc + mod.lessons.length,
+      0
+    );
+    if (completedLessons.length >= totalLessons) {
+      try {
+        await fetch(`/api/certificates/${slug}`);
+      } catch (error) {
+        console.error("Failed to check certificate:", error);
+      }
+    }
+  };
+
+  const updateProgress = async (lessonIdToUpdate: string, completed: boolean) => {
     try {
       const response = await fetch("/api/progress", {
         method: "PUT",
@@ -67,7 +98,7 @@ const LessonClientPage: React.FC<LessonClientPageProps> = ({
         },
         body: JSON.stringify({
           courseSlug: slug,
-          lessonId,
+          lessonId: lessonIdToUpdate,
           completed,
         }),
       });
@@ -75,7 +106,6 @@ const LessonClientPage: React.FC<LessonClientPageProps> = ({
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          // Update local enrollment state
           setEnrollment((prev) => ({
             ...prev,
             progress: {
@@ -83,32 +113,34 @@ const LessonClientPage: React.FC<LessonClientPageProps> = ({
               completedLessons: result.data.completedLessons,
             },
           }));
+          if (completed) {
+            await checkCertificate(result.data.completedLessons);
+          }
+          return result.data.completedLessons as string[];
         }
       }
     } catch (error) {
       console.error("Failed to update progress:", error);
     }
+    return null;
+  };
+
+  const handleQuizPassed = async () => {
+    await updateProgress(lessonId, true);
   };
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push(
-        `/authentication/sign-in?callbackUrl=/mycourses/${slug}/${moduleIndex}/${lessonIndex}`
+    // Auto-mark complete only when lesson has no linked quiz
+    if (hasQuiz === false) {
+      const completedLessonIds = new Set(
+        enrollment.progress?.completedLessons || []
       );
-      return;
-    }
-
-    // Mark current lesson as completed if viewing
-    const lessonId = `${moduleIndex}-${lessonIndex}`;
-    const completedLessonIds = new Set(
-      enrollment.progress?.completedLessons || []
-    );
-    if (!completedLessonIds.has(lessonId)) {
-      // Auto-mark as completed when viewing
-      updateProgress(lessonId, true);
+      if (!completedLessonIds.has(lessonId)) {
+        updateProgress(lessonId, true);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, slug, moduleIndex, lessonIndex]);
+  }, [status, slug, moduleIndex, lessonIndex, hasQuiz]);
 
   if (status === "loading") {
     return (
@@ -158,6 +190,7 @@ const LessonClientPage: React.FC<LessonClientPageProps> = ({
       nextLessonLink={nextLessonLink}
       slug={slug}
       onToggleComplete={handleToggleComplete}
+      onQuizPassed={handleQuizPassed}
     />
   );
 };

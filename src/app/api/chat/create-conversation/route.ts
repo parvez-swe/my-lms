@@ -47,7 +47,13 @@ async function resolveParticipantFromDatabase(
 
 // POST /api/chat/create-conversation - Create ONE-ON-ONE conversation
 export async function POST(request: NextRequest) {
+  /* auth-guarded */
   try {
+    const currentUser = await getRequestParticipant(request);
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       recipientId,
@@ -67,8 +73,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const currentUser = getRequestParticipant(request);
 
     if (currentUser.id === recipientId) {
       return NextResponse.json(

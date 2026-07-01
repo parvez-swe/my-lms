@@ -13,11 +13,15 @@ export interface EnrollmentAddress {
 }
 
 export interface PaymentInfo {
-  method: "bkash" | "card" | "bank";
+  method: "bkash" | "nagad" | "sslcommerz" | "stripe" | "card" | "bank";
   bkashNumber?: string;
+  nagadNumber?: string;
   transactionId: string;
   amount?: number;
+  currency?: string;
   paidAt?: Date;
+  gatewaySessionId?: string;
+  paymentRecordId?: string;
 }
 
 export interface EnrollmentDocument {

@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { EnrollmentDocument } from "@/models/Enrollment";
 import { CourseDocument } from "@/models/Course";
-import { sendEnrollmentEmail } from "@/lib/email";
+import { sendEnrollmentEmail, sendEnrollmentStatusEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import { ObjectId } from "mongodb";
 
 // Force dynamic rendering
@@ -50,6 +51,29 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
     const userId = new ObjectId(session.user.id);
 
+    const course = await db
+      .collection<CourseDocument>("courses")
+      .findOne({ slug: courseSlug });
+    if (!course) {
+      return NextResponse.json(
+        { success: false, error: "Course not found" },
+        { status: 404 }
+      );
+    }
+
+    const isFreeCourse =
+      course.pricingType === "free" ||
+      (course.priceAmount !== undefined && course.priceAmount === 0) ||
+      course.price === "Free" ||
+      course.price === "$0";
+
+    if (!isFreeCourse && !payment) {
+      return NextResponse.json(
+        { success: false, error: "Payment information is required" },
+        { status: 400 }
+      );
+    }
+
     // Check if enrollment already exists
     const existingEnrollment = await db
       .collection<EnrollmentDocument>("enrollments")
@@ -65,22 +89,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch course to get details for email
-    const course = await db
-      .collection<CourseDocument>("courses")
-      .findOne({ slug: courseSlug });
-    if (!course) {
-      return NextResponse.json(
-        { success: false, error: "Course not found" },
-        { status: 404 }
-      );
-    }
+    // Fetch course to get details for email (already loaded above)
 
     // Create enrollment with personal information
     const enrollment: EnrollmentDocument = {
       userId: userId,
       courseSlug: courseSlug,
-      status: "pending",
+      status: isFreeCourse ? "approved" : "pending",
       enrolledAt: new Date(),
       phone,
       currentJob,
@@ -118,7 +133,22 @@ export async function POST(request: NextRequest) {
 
     // Send enrollment email
     if (session.user.email && session.user.name) {
-      await sendEnrollmentEmail(session.user.email, session.user.name, course);
+      if (isFreeCourse) {
+        await sendEnrollmentStatusEmail(
+          session.user.email,
+          session.user.name,
+          course,
+          "approved"
+        );
+        await createNotification(db, {
+          userId: session.user.id,
+          type: "enrollment_approved",
+          message: `Your enrollment in "${course.title}" has been approved.`,
+          link: `/mycourses/${courseSlug}`,
+        });
+      } else {
+        await sendEnrollmentEmail(session.user.email, session.user.name, course);
+      }
     }
 
     return NextResponse.json(
@@ -157,18 +187,19 @@ export async function GET() {
       .find({ userId: userId })
       .toArray();
 
-    // Fetch course details for each enrollment
-    const enrollmentsWithCourses = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        const course = await db
-          .collection("courses")
-          .findOne({ slug: enrollment.courseSlug });
-        return {
-          ...enrollment,
-          course: course,
-        };
-      })
-    );
+    const slugs = [...new Set(enrollments.map((e) => e.courseSlug))];
+    const courses = slugs.length
+      ? await db
+          .collection<CourseDocument>("courses")
+          .find({ slug: { $in: slugs } })
+          .toArray()
+      : [];
+    const courseMap = new Map(courses.map((c) => [c.slug, c]));
+
+    const enrollmentsWithCourses = enrollments.map((enrollment) => ({
+      ...enrollment,
+      course: courseMap.get(enrollment.courseSlug) ?? null,
+    }));
 
     return NextResponse.json({
       success: true,

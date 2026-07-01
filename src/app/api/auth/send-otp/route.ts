@@ -3,6 +3,7 @@ import { getDatabase } from "@/lib/mongodb";
 import { UserDocument } from "@/models/User";
 import { sendOTPEmail } from "@/lib/email";
 import { generateOTP, getOTPExpiry } from "@/lib/otp";
+import { withRateLimit } from "@/lib/rateLimit";
 
 // Force dynamic rendering
 export const dynamic = "force-dynamic";
@@ -10,6 +11,14 @@ export const dynamic = "force-dynamic";
 // POST - Send OTP to email
 export async function POST(request: NextRequest) {
   try {
+    const rateLimited = withRateLimit(
+      request,
+      "send-otp",
+      3,
+      10 * 60 * 1000
+    );
+    if (rateLimited) return rateLimited;
+
     const body = await request.json();
     const { email } = body;
 

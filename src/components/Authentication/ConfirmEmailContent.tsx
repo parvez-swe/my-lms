@@ -29,7 +29,7 @@ const ConfirmEmailContentInner: React.FC = () => {
           setMessage("Your email has been verified successfully!");
           // Redirect to sign in after 3 seconds
           setTimeout(() => {
-            router.push("/authentication/sign-in");
+            router.push("/auth/signin");
           }, 3000);
         } else {
           setStatus("error");
@@ -131,7 +131,7 @@ const ConfirmEmailContentInner: React.FC = () => {
               <div className="mt-[20px] md:mt-[25px] lg:mt-[30px]">
                 {status === "success" && (
                   <Link
-                    href="/authentication/sign-in"
+                    href="/auth/signin"
                     className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400"
                   >
                     <span className="flex items-center justify-center gap-[5px]">
@@ -153,7 +153,7 @@ const ConfirmEmailContentInner: React.FC = () => {
                       </span>
                     </Link>
                     <Link
-                      href="/authentication/sign-in"
+                      href="/auth/signin"
                       className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-primary-500 border border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
                     >
                       Back to Sign In
@@ -163,7 +163,7 @@ const ConfirmEmailContentInner: React.FC = () => {
 
                 {status === "pending" && (
                   <Link
-                    href="/authentication/sign-in"
+                    href="/auth/signin"
                     className="md:text-md block w-full text-center transition-all rounded-md font-medium py-[12px] px-[25px] text-white bg-primary-500 hover:bg-primary-400"
                   >
                     <span className="flex items-center justify-center gap-[5px]">

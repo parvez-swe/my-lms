@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Course } from "@/data/courses";
 import LessonClientPage from "./LessonClientPage";
 import { auth } from "@/lib/auth";
@@ -22,12 +22,9 @@ interface LessonPageParams {
 export default async function LessonPage({ params }: LessonPageParams) {
   const { slug, moduleId, lessonId } = await params;
 
-  // Check authentication
   const session = await auth();
   if (!session?.user) {
-    redirect(
-      `/authentication/sign-in?callbackUrl=/mycourses/${slug}/${moduleId}/${lessonId}`
-    );
+    notFound();
   }
 
   // Fetch course from API
